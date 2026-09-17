@@ -2,18 +2,20 @@ import "./style.css";
 import { db } from "./firebase.js";
 import {
   doc,
+  getDoc,
   runTransaction,
   onSnapshot,
 } from "firebase/firestore";
 
 // ============================================================
-// 定数・純粋ロジック（旧 Code.gs の移植）
+// 定数・純粋ロジック（旧 Code.gs の移植・変更なし）
 // ============================================================
 const MARKS = ["♠", "♥", "♣", "♦"];
 const NUMBERS = [1, 2, 3, 4];
 const RED_MARKS = ["♥", "♦"];
 const WIN_COUNT_OPTIONS = [3, 4, 5, 6, 7];
 const JOKER_COST_OPTIONS = [1, 2, 3, 4];
+const SESSION_KEY = "trump_jinro_session";
 
 class GameActionError extends Error {
   constructor(message, payload) {
@@ -105,8 +107,6 @@ function endGame(state, winnerSlot, reason) {
   state.reason = reason;
   addLog(state, "🎉 ゲーム終了：プレイヤー" + winnerSlot + "の勝利（" + reason + "）");
 }
-
-// --- 各アクションの純粋な状態遷移関数 ---
 
 function reduceJoin(state, slot) {
   if (state.status === "waiting") {
@@ -465,15 +465,22 @@ function reduceMulligan(state, slot) {
 // Firestore 通信レイヤー
 // ============================================================
 function normalizeRoomId(roomId) {
-  return String(roomId || "").trim().toUpperCase().slice(0, 20);
+  return String(roomId || "").trim().toUpperCase().slice(0, 6);
 }
 
-function roomRef(roomId) {
-  return doc(db, "rooms", normalizeRoomId(roomId));
+function generateRoomId() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // 紛らわしい 0,O,1,I は除外
+  let id = "";
+  for (let i = 0; i < 6; i++) id += chars[Math.floor(Math.random() * chars.length)];
+  return id;
 }
 
-async function runAction(roomId, mutateFn) {
-  const ref = roomRef(roomId);
+function roomRef(id) {
+  return doc(db, "rooms", normalizeRoomId(id));
+}
+
+async function runAction(id, mutateFn) {
+  const ref = roomRef(id);
   return runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
     let state = snap.exists() ? JSON.parse(JSON.stringify(snap.data())) : createDefaultRoomState();
@@ -485,7 +492,20 @@ async function runAction(roomId, mutateFn) {
 }
 
 const Game = {
-  join: (roomId, slot) => runAction(roomId, (s) => reduceJoin(s, slot)),
+  createRoom: async () => {
+    const id = generateRoomId();
+    const state = await runAction(id, (s) => reduceJoin(s, "A"));
+    return { id, state };
+  },
+  joinExisting: async (idInput) => {
+    const id = normalizeRoomId(idInput);
+    const snap = await getDoc(roomRef(id));
+    if (!snap.exists()) {
+      throw new GameActionError("そのルームIDが見つかりません。IDを確認してください。");
+    }
+    const state = await runAction(id, (s) => reduceJoin(s, "B"));
+    return { id, state };
+  },
   updateSettings: (roomId, slot, infoType, winCount, jokerCost) =>
     runAction(roomId, (s) => reduceUpdateSettings(s, slot, infoType, winCount, jokerCost)),
   start: (roomId) => runAction(roomId, (s) => reduceStartGame(s)),
@@ -499,6 +519,24 @@ const Game = {
   subscribe: (roomId, cb) =>
     onSnapshot(roomRef(roomId), (snap) => cb(snap.exists() ? snap.data() : null)),
 };
+
+// ============================================================
+// セッション保存（リロード耐性）
+// ============================================================
+function saveSession() {
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ roomId, slot: mySlot }));
+}
+function loadSession() {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+function clearSession() {
+  localStorage.removeItem(SESSION_KEY);
+}
 
 // ============================================================
 // UI（DOM描画）
@@ -519,8 +557,11 @@ function cardButtonLabel(card) {
   return "?";
 }
 function cardButtonClass(card) {
-  if (card.type === "citizen") return RED_MARKS.includes(card.mark) ? "mark-red" : "mark-black";
-  return "secondary";
+  if (card.type === "citizen")
+    return "tcg-card citizen-card " + (RED_MARKS.includes(card.mark) ? "mark-red" : "mark-black");
+  if (card.type === "role") return "tcg-card role-card";
+  if (card.type === "joker") return "tcg-card joker-card";
+  return "tcg-card facedown-card";
 }
 
 function showModal(html) {
@@ -546,37 +587,68 @@ function closeSheet() {
   document.getElementById("sheetOverlay").classList.remove("show");
 }
 
-// --- 画面：入室フォーム ---
-function renderJoinScreen() {
+const modalOverlayHtml = `<div class="modal-overlay" id="modalOverlay"><div class="modal-box"><div id="modalContent"></div></div></div>`;
+
+// --- 画面：ランディング（部屋を作る／入る） ---
+function renderLandingScreen() {
   app.innerHTML = `
-    <h1 style="text-align:center;font-size:18px;margin-bottom:16px;">🐺 トランプ人狼（完全Webモード）</h1>
-    <div class="flat-section">
-      <label>ルームID（友達と同じ文字列を入力）</label>
-      <input type="text" id="roomIdInput" placeholder="例：ROOM123" />
-      <div style="display:flex;gap:8px;margin-top:8px;">
-        <button id="joinAsA">プレイヤーAとして入室</button>
-        <button id="joinAsB">プレイヤーBとして入室</button>
+    <div class="landing-wrap">
+      <div class="landing-logo">🐺</div>
+      <div class="landing-title">トランプ人狼</div>
+      <div class="landing-sub">DUAL BLIND DUEL</div>
+      <div class="landing-buttons">
+        <button class="hero-btn hero-btn-create" id="createRoomBtn">
+          <span class="hero-btn-icon">🏰</span><span>部屋を作る</span>
+        </button>
+        <button class="hero-btn hero-btn-join" id="showJoinFormBtn">
+          <span class="hero-btn-icon">🚪</span><span>部屋に入る</span>
+        </button>
       </div>
-      <p style="font-size:12px;color:#999;margin-top:8px;">
-        ※2台のスマホで同じルームIDを入力し、片方がA、もう片方がBとして入室してください。
-      </p>
+      <div class="join-form" id="joinForm" style="display:none;">
+        <label>ルームID</label>
+        <input type="text" id="joinIdInput" placeholder="例：AB3XQ9" maxlength="6" />
+        <button class="hero-btn-join-submit" id="submitJoinBtn">入室する</button>
+      </div>
     </div>
-    <div class="modal-overlay" id="modalOverlay"><div class="modal-box"><div id="modalContent"></div></div></div>
+    ${modalOverlayHtml}
   `;
-  document.getElementById("joinAsA").onclick = () => handleJoin("A");
-  document.getElementById("joinAsB").onclick = () => handleJoin("B");
+  document.getElementById("createRoomBtn").onclick = handleCreateRoom;
+  document.getElementById("showJoinFormBtn").onclick = () => {
+    document.getElementById("joinForm").style.display = "block";
+    document.getElementById("joinIdInput").focus();
+  };
+  document.getElementById("submitJoinBtn").onclick = handleJoinRoomSubmit;
 }
 
-async function handleJoin(slot) {
-  const input = document.getElementById("roomIdInput").value;
-  if (!input || !input.trim()) {
+function renderLoading() {
+  app.innerHTML = `<div class="landing-wrap"><div class="loading-text">読み込み中...</div></div>${modalOverlayHtml}`;
+}
+
+async function handleCreateRoom() {
+  try {
+    const { id } = await Game.createRoom();
+    roomId = id;
+    mySlot = "A";
+    saveSession();
+    lastSeenSeq = 0;
+    endAnnounced = false;
+    startWatching();
+  } catch (err) {
+    showError(err);
+  }
+}
+
+async function handleJoinRoomSubmit() {
+  const val = document.getElementById("joinIdInput").value;
+  if (!val || !val.trim()) {
     showSimpleModal("ルームIDを入力してください。");
     return;
   }
   try {
-    const state = await Game.join(input, slot);
-    roomId = normalizeRoomId(input);
-    mySlot = slot;
+    const { id, state } = await Game.joinExisting(val);
+    roomId = id;
+    mySlot = "B";
+    saveSession();
     lastSeenSeq = (state.lastAction && state.lastAction.seq) || 0;
     endAnnounced = state.status === "ended";
     startWatching();
@@ -588,7 +660,12 @@ async function handleJoin(slot) {
 function startWatching() {
   if (unsubscribe) unsubscribe();
   unsubscribe = Game.subscribe(roomId, (state) => {
-    if (!state) return;
+    if (!state) {
+      clearSession();
+      renderLandingScreen();
+      showSimpleModal("ルームが見つかりませんでした。");
+      return;
+    }
     renderGame(state);
     maybeAnnounceEnd(state);
   });
@@ -599,30 +676,36 @@ function leaveRoom() {
   unsubscribe = null;
   roomId = null;
   mySlot = null;
-  renderJoinScreen();
+  clearSession();
+  renderLandingScreen();
 }
 
-// --- 画面：ゲーム全体（待機／プレイ中／終了） ---
+// --- 画面：ゲーム全体 ---
 function renderGame(state) {
-  if (state.status === "waiting") {
-    renderWaiting(state);
-  } else {
-    renderPlaying(state);
-  }
+  if (state.status === "waiting") renderWaiting(state);
+  else renderPlaying(state);
 }
 
 function renderWaiting(state) {
   app.innerHTML = `
-    <h1 style="text-align:center;font-size:18px;margin-bottom:16px;">🐺 トランプ人狼（完全Webモード）</h1>
-    <div class="flat-section">
-      <div class="flat-label">🕒 対戦相手を待っています</div>
-      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
-        <span>プレイヤーA</span><span>${state.players.A ? "✅ 入室済み" : "未入室"}</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:10px;">
-        <span>プレイヤーB</span><span>${state.players.B ? "✅ 入室済み" : "未入室"}</span>
-      </div>
+    <div class="duel-header"><div class="duel-title">🐺 トランプ人狼</div></div>
 
+    <div class="room-id-card">
+      <div class="room-id-label">ROOM ID</div>
+      <div class="room-id-value">${roomId}</div>
+      <button class="copy-btn" id="copyIdBtn">📋 コピー</button>
+    </div>
+
+    <div class="waiting-panel flat-section">
+      <div class="flat-label">🕒 対戦相手を待っています</div>
+      <div class="player-slot-row">
+        <div class="player-slot ${state.players.A ? "ready" : ""}">A ${state.players.A ? "✅" : "…"}</div>
+        <div class="vs-mark">VS</div>
+        <div class="player-slot ${state.players.B ? "ready" : ""}">B ${state.players.B ? "✅" : "…"}</div>
+      </div>
+    </div>
+
+    <div class="settings-panel">
       <label>初期情報タイプ</label>
       <select id="infoTypeSelect">
         <option value="除外" ${state.settings.infoType === "除外" ? "selected" : ""}>除外（〇ではない）</option>
@@ -636,13 +719,20 @@ function renderWaiting(state) {
       <select id="jokerCostSelect">
         ${JOKER_COST_OPTIONS.map((n) => `<option value="${n}" ${state.settings.jokerCost === n ? "selected" : ""}>コスト${n}</option>`).join("")}
       </select>
-      <button class="secondary" id="saveSettingsBtn" style="margin-top:8px;">設定を保存</button>
-      <button class="success-btn" id="startBtn" ${!(state.players.A && state.players.B) ? "disabled" : ""}>🎮 ゲーム開始</button>
+      <button class="secondary" id="saveSettingsBtn">設定を保存</button>
+      <button class="hero-btn-create" id="startBtn" ${!(state.players.A && state.players.B) ? "disabled" : ""}>⚔️ ゲーム開始</button>
       <button class="danger" id="leaveBtn">退室する</button>
     </div>
-    <div class="modal-overlay" id="modalOverlay"><div class="modal-box"><div id="modalContent"></div></div></div>
+    ${modalOverlayHtml}
   `;
 
+  document.getElementById("copyIdBtn").onclick = () => {
+    navigator.clipboard.writeText(roomId).then(() => {
+      const btn = document.getElementById("copyIdBtn");
+      btn.textContent = "✅ コピーしました";
+      setTimeout(() => (btn.textContent = "📋 コピー"), 1500);
+    });
+  };
   document.getElementById("saveSettingsBtn").onclick = async () => {
     const infoType = document.getElementById("infoTypeSelect").value;
     const winCount = document.getElementById("winCountSelect").value;
@@ -753,8 +843,6 @@ function renderPlaying(state) {
     : "";
 
   app.innerHTML = `
-    <h1 style="text-align:center;font-size:18px;margin-bottom:8px;">🐺 トランプ人狼</h1>
-
     <div class="sticky-bar ${isEnded ? "" : isMyTurn ? "my-turn" : "opp-turn"}">
       ${
         isEnded
@@ -772,6 +860,7 @@ function renderPlaying(state) {
       <div class="stat-pill">🎴 山札 ${state.drawPile?.length ?? 0}</div>
       <div class="stat-pill">💠 自分 ${myCost}</div>
       <div class="stat-pill">💠 相手 ${oppCost}</div>
+      <div class="stat-pill">🆔 ${roomId}</div>
     </div>
 
     ${seerLogHtml}
@@ -823,10 +912,9 @@ function renderPlaying(state) {
       </div>
     </div>
 
-    <div class="modal-overlay" id="modalOverlay"><div class="modal-box"><div id="modalContent"></div></div></div>
+    ${modalOverlayHtml}
   `;
 
-  // --- イベントバインド ---
   const drawBtn = document.getElementById("drawBtn");
   if (drawBtn) drawBtn.onclick = () => Game.draw(roomId, mySlot).catch(showError);
 
@@ -884,7 +972,6 @@ function renderPlaying(state) {
   const leaveBtn2 = document.getElementById("leaveBtn2");
   if (leaveBtn2) leaveBtn2.onclick = leaveRoom;
 
-  // ターン交代の通知（モーダル、進むボタン式）
   maybeAnnounceTurn(state);
 }
 
@@ -917,7 +1004,6 @@ function confirmPlayRole(card) {
   `);
 }
 
-// --- ターン交代／決着の通知 ---
 function maybeAnnounceTurn(state) {
   if (state.status !== "playing") return;
   const la = state.lastAction;
@@ -946,7 +1032,6 @@ function maybeAnnounceEnd(state) {
   `);
 }
 
-// --- window に公開するアクション（onclick から呼ぶため） ---
 window.__closeModal = closeModal;
 window.__playCitizen = (cardId) => {
   closeModal();
@@ -986,5 +1071,13 @@ window.__mulligan = () => {
   Game.mulligan(roomId, mySlot).catch(showError);
 };
 
-// --- 初期実行 ---
-renderJoinScreen();
+// --- 初期実行：セッションがあれば自動復帰、無ければランディング表示 ---
+const session = loadSession();
+if (session && session.roomId && session.slot) {
+  roomId = session.roomId;
+  mySlot = session.slot;
+  renderLoading();
+  startWatching();
+} else {
+  renderLandingScreen();
+}
