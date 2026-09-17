@@ -8,7 +8,7 @@ import {
 } from "firebase/firestore";
 
 // ============================================================
-// 定数・純粋ロジック（旧 Code.gs の移植・変更なし）
+// 定数・純粋ロジック（旧 Code.gs の移植・ゲームルールは変更なし）
 // ============================================================
 const MARKS = ["♠", "♥", "♣", "♦"];
 const NUMBERS = [1, 2, 3, 4];
@@ -16,6 +16,33 @@ const RED_MARKS = ["♥", "♦"];
 const WIN_COUNT_OPTIONS = [3, 4, 5, 6, 7];
 const JOKER_COST_OPTIONS = [1, 2, 3, 4];
 const SESSION_KEY = "trump_jinro_session";
+
+// --- カードスプライト（public/cards.png）の割り当てロジック ---
+// シートは ♣→♦→♥→♠ の順に「1,2,3,4,J,Q,K」を7枚ずつ（計28枚）＋ジョーカー2枚、
+// 6列×5行で並んでいる。
+const SPRITE_SUIT_ORDER = ["♣", "♦", "♥", "♠"];
+const SPRITE_RANK_ORDER = ["1", "2", "3", "4", "J", "Q", "K"];
+const SPRITE_COLS = 6;
+const SPRITE_ROWS = 5;
+
+function getSpriteIndex(card) {
+  if (card.type === "joker") {
+    return 28 + (Number(card.id) % 2 === 0 ? 0 : 1);
+  }
+  const suitIdx = SPRITE_SUIT_ORDER.indexOf(card.mark);
+  const rankKey = card.type === "citizen" ? String(card.number) : card.role;
+  const rankIdx = SPRITE_RANK_ORDER.indexOf(rankKey);
+  if (suitIdx === -1 || rankIdx === -1) return null;
+  return suitIdx * 7 + rankIdx;
+}
+
+function spriteBackgroundPosition(index) {
+  const col = index % SPRITE_COLS;
+  const row = Math.floor(index / SPRITE_COLS);
+  const x = (col / (SPRITE_COLS - 1)) * 100;
+  const y = (row / (SPRITE_ROWS - 1)) * 100;
+  return `${x}% ${y}%`;
+}
 
 class GameActionError extends Error {
   constructor(message, payload) {
@@ -469,7 +496,7 @@ function normalizeRoomId(roomId) {
 }
 
 function generateRoomId() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // 紛らわしい 0,O,1,I は除外
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let id = "";
   for (let i = 0; i < 6; i++) id += chars[Math.floor(Math.random() * chars.length)];
   return id;
@@ -549,19 +576,45 @@ let unsubscribe = null;
 let lastSeenSeq = 0;
 let endAnnounced = false;
 
-function cardButtonLabel(card) {
-  if (card.type === "citizen") return card.mark + card.number;
-  if (card.type === "role") return card.role + "(" + card.mark + ")";
-  if (card.type === "joker") return "JOKER";
-  if (card.type === "facedown") return "？";
-  return "?";
+// --- カードのビジュアル生成（CSSスプライト適用） ---
+function cardVisualHtml(card, opts = {}) {
+  const { interactive = false, disabled = true, dataCardId = null, extraClass = "" } = opts;
+  const disabledAttr = disabled ? "disabled" : "";
+  const dataAttr = dataCardId ? `data-card-id="${dataCardId}"` : "";
+  const interactiveClass = interactive ? "interactive" : "";
+
+  if (card.type === "facedown") {
+    return `<button ${disabledAttr} ${dataAttr} class="card card-back ${extraClass}"><span class="card-back-emblem">🐺</span></button>`;
+  }
+
+  const idx = getSpriteIndex(card);
+  const pos = idx !== null ? spriteBackgroundPosition(idx) : "0% 0%";
+  const frameClass =
+    card.type === "citizen"
+      ? RED_MARKS.includes(card.mark) ? "suit-red" : "suit-black"
+      : card.type === "role"
+      ? "role-frame"
+      : "joker-frame";
+  const corner =
+    card.type === "citizen" ? card.mark + card.number : card.type === "role" ? card.role : "JOKER";
+
+  return `<button ${disabledAttr} ${dataAttr}
+      class="card ${frameClass} ${interactiveClass} ${extraClass}"
+      style="background-image:url('/cards.png'); background-position:${pos};">
+      <span class="card-corner">${corner}</span>
+    </button>`;
 }
-function cardButtonClass(card) {
-  if (card.type === "citizen")
-    return "tcg-card citizen-card " + (RED_MARKS.includes(card.mark) ? "mark-red" : "mark-black");
-  if (card.type === "role") return "tcg-card role-card";
-  if (card.type === "joker") return "tcg-card joker-card";
-  return "tcg-card facedown-card";
+
+function miniCitizenCardHtml(mark, num, played) {
+  const card = { type: "citizen", mark, number: num };
+  const idx = getSpriteIndex(card);
+  const pos = spriteBackgroundPosition(idx);
+  const frameClass = RED_MARKS.includes(mark) ? "suit-red" : "suit-black";
+  const corner = played ? "済" : mark + num;
+  return `<div class="card mini-card ${frameClass} ${played ? "played" : ""}"
+      style="background-image:url('/cards.png'); background-position:${pos};">
+      <span class="card-corner">${corner}</span>
+    </div>`;
 }
 
 function showModal(html) {
@@ -696,7 +749,7 @@ function renderWaiting(state) {
       <button class="copy-btn" id="copyIdBtn">📋 コピー</button>
     </div>
 
-    <div class="waiting-panel flat-section">
+    <div class="waiting-panel flat-section panel">
       <div class="flat-label">🕒 対戦相手を待っています</div>
       <div class="player-slot-row">
         <div class="player-slot ${state.players.A ? "ready" : ""}">A ${state.players.A ? "✅" : "…"}</div>
@@ -769,31 +822,26 @@ function renderPlaying(state) {
   );
 
   const citizenGridHtml = MARKS.map((mark) =>
-    NUMBERS.map((num) => {
-      const key = mark + num;
-      const played = playedSet.has(key);
-      const cls = played ? "played" : RED_MARKS.includes(mark) ? "mark-red" : "mark-black";
-      return `<button disabled class="${cls}">${mark}${num}</button>`;
-    }).join("")
+    NUMBERS.map((num) => miniCitizenCardHtml(mark, num, playedSet.has(mark + num))).join("")
   ).join("");
 
   const tableRow = (slot) => {
     const label = slot === mySlot ? `あなたの場(${slot})` : `相手の場(${slot})`;
     const cards = (state.table[slot] || [])
-      .map((c) => `<button disabled class="${cardButtonClass(c)}">${cardButtonLabel(c)}</button>`)
+      .map((c) => cardVisualHtml(c, { extraClass: "mini-field-card" }))
       .join("");
-    return `<div class="field-row"><div class="field-label">${label}</div><div class="card-list compact">${cards}</div></div>`;
+    return `<div class="field-row"><div class="field-label">${label}</div><div class="card-list">${cards}</div></div>`;
   };
   const discardRow = (slot) => {
     const cards = (state.roleDiscard?.[slot] || [])
-      .map((c) => `<button disabled class="${cardButtonClass(c)}">${cardButtonLabel(c)}</button>`)
+      .map((c) => cardVisualHtml(c, { extraClass: "mini-field-card" }))
       .join("");
-    return `<div class="field-row"><div class="field-label">🎭 使用済(${slot})</div><div class="card-list compact">${cards}</div></div>`;
+    return `<div class="field-row"><div class="field-label">🎭 使用済(${slot})</div><div class="card-list">${cards}</div></div>`;
   };
 
   const seerLogHtml =
     state.seerRevealLog && state.seerRevealLog[mySlot] && state.seerRevealLog[mySlot].length > 0
-      ? `<div class="flat-section">
+      ? `<div class="flat-section panel">
            <div class="flat-label">🔮 占い師の履歴（あなただけ）</div>
            <div class="log-box">${state.seerRevealLog[mySlot].map((t, i) => `<div>${i + 1}回目：${t}</div>`).join("")}</div>
          </div>`
@@ -815,7 +863,12 @@ function renderPlaying(state) {
   const handHtml = (state.hands?.[mySlot] || [])
     .map((card) => {
       const canAct = isMyTurn && state.phase === "needAction";
-      return `<button data-card-id="${card.id}" ${canAct ? "" : "disabled"} class="${cardButtonClass(card)} hand-card">${cardButtonLabel(card)}</button>`;
+      return cardVisualHtml(card, {
+        interactive: canAct,
+        disabled: !canAct,
+        dataCardId: card.id,
+        extraClass: "hand-card",
+      });
     })
     .join("");
 
@@ -865,22 +918,22 @@ function renderPlaying(state) {
 
     ${seerLogHtml}
 
-    <div class="flat-section">
+    <div class="flat-section panel">
       <div class="flat-label">🃏 市民カード状況</div>
-      <div class="grid4">${citizenGridHtml}</div>
+      <div class="mini-grid">${citizenGridHtml}</div>
     </div>
 
-    <div class="flat-section">
+    <div class="flat-section panel">
       ${tableRow("A")}
       ${tableRow("B")}
       ${discardRow("A")}
       ${discardRow("B")}
     </div>
 
-    <div class="flat-section">
+    <div class="flat-section panel">
       <div class="flat-label">✋ あなたの手札</div>
       <div class="card-list">${handHtml}</div>
-      <div style="display:flex;gap:8px;margin-top:8px;">
+      <div style="display:flex;gap:8px;margin-top:10px;">
         ${
           !isEnded && isMyTurn && state.phase === "needDraw"
             ? `<button id="drawBtn">🎴 山札から引く</button>`
@@ -892,7 +945,7 @@ function renderPlaying(state) {
 
     ${endedHtml}
 
-    <div class="flat-section">
+    <div class="flat-section panel">
       <div class="flat-label">📝 ログ</div>
       <div class="log-box">${(state.log || []).map((l) => `<div>${l}</div>`).join("")}</div>
     </div>
@@ -1070,6 +1123,17 @@ window.__mulligan = () => {
   closeModal();
   Game.mulligan(roomId, mySlot).catch(showError);
 };
+
+// --- Grokクレジット表記（常時固定表示） ---
+function renderCreditBadge() {
+  if (document.getElementById("grokCredit")) return;
+  const el = document.createElement("div");
+  el.id = "grokCredit";
+  el.className = "grok-credit";
+  el.textContent = "✨ Created with Grok";
+  document.body.appendChild(el);
+}
+renderCreditBadge();
 
 // --- 初期実行：セッションがあれば自動復帰、無ければランディング表示 ---
 const session = loadSession();
