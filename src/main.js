@@ -17,7 +17,6 @@ const WIN_COUNT_OPTIONS = [3, 4, 5, 6, 7];
 const JOKER_COST_OPTIONS = [1, 2, 3, 4];
 const SESSION_KEY = "trump_jinro_session";
 
-// --- カードスプライト（public/cards.png）の割り当てロジック ---
 const SPRITE_SUIT_ORDER = ["♣", "♦", "♥", "♠"];
 const SPRITE_RANK_ORDER = ["1", "2", "3", "4", "J", "Q", "K"];
 const SPRITE_COLS = 6;
@@ -599,12 +598,20 @@ function cardVisualHtml(card, opts = {}) {
       style="background-image:url('/cards.png'); background-position:${pos};"></button>`;
 }
 
-function miniCitizenCardHtml(mark, num, played) {
-  const idx = getSpriteIndex({ type: "citizen", mark, number: num });
-  const pos = spriteBackgroundPosition(idx);
-  const frameClass = RED_MARKS.includes(mark) ? "suit-red" : "suit-black";
-  return `<div class="card mini-card ${frameClass} ${played ? "played" : ""}"
-      style="background-image:url('/cards.png'); background-position:${pos};"></div>`;
+// 場・使用済み列：常に最低6スロット（空き枠はダッシュの空プレースホルダー）
+function renderSlotsHtml(cards, minSlots, extraClass) {
+  const items = cards.map((c) => cardVisualHtml(c, { extraClass }));
+  const totalSlots = Math.max(minSlots, items.length);
+  while (items.length < totalSlots) {
+    items.push(`<div class="field-slot empty"></div>`);
+  }
+  return items.join("");
+}
+
+// 市民カード状況：テキストのみの軽量4×4ミニグリッド
+function statusCellHtml(mark, num, played) {
+  const cls = RED_MARKS.includes(mark) ? "mark-red" : "mark-black";
+  return `<div class="status-cell ${cls} ${played ? "played" : ""}">${mark}${num}</div>`;
 }
 
 function showModal(html) {
@@ -769,6 +776,19 @@ function leaveRoom() {
   renderLandingScreen();
 }
 
+function confirmLeaveMidGame() {
+  showModal(`
+    <div class="big-text">退室しますか？</div>
+    <div style="font-size:12px;color:#f4b400;margin-bottom:10px;">対戦中でも自分の画面から抜けられます。</div>
+    <button class="danger" onclick="window.__leaveConfirmed()">退室する</button>
+    <button class="secondary" onclick="window.__closeModal()">キャンセル</button>
+  `);
+}
+window.__leaveConfirmed = () => {
+  closeModal();
+  leaveRoom();
+};
+
 // --- 画面：ゲーム全体 ---
 function renderGame(state) {
   if (state.status === "waiting") renderWaiting(state);
@@ -852,6 +872,7 @@ function renderPlaying(state) {
   const opp = opponent(mySlot);
   const isMyTurn = !isEnded && state.currentTurn === mySlot;
 
+  // --- ヘッダー：相手の手札枚数 ＋ 市民4×4状況表 ---
   const playedSet = new Set();
   ["A", "B"].forEach((s) =>
     (state.table[s] || []).forEach((c) => {
@@ -859,21 +880,17 @@ function renderPlaying(state) {
     })
   );
   const citizenGridHtml = MARKS.map((mark) =>
-    NUMBERS.map((num) => miniCitizenCardHtml(mark, num, playedSet.has(mark + num))).join("")
+    NUMBERS.map((num) => statusCellHtml(mark, num, playedSet.has(mark + num))).join("")
   ).join("");
+  const oppHandCount = state.hands?.[opp]?.length ?? 0;
 
-  const fieldCardsHtml = (slot) =>
-    (state.table[slot] || []).map((c) => cardVisualHtml(c, { extraClass: "battle-card" })).join("");
+  // --- フィールド行（市民列・役職列） ---
+  const oppCitizenRow = renderSlotsHtml(state.table[opp] || [], 6, "field-card");
+  const oppRoleRow = renderSlotsHtml(state.roleDiscard?.[opp] || [], 6, "field-card");
+  const myCitizenRow = renderSlotsHtml(state.table[mySlot] || [], 6, "field-card");
+  const myRoleRow = renderSlotsHtml(state.roleDiscard?.[mySlot] || [], 6, "field-card");
 
-  const discardPileHtml = (slot) => {
-    const cards = state.roleDiscard?.[slot] || [];
-    if (cards.length === 0) return "";
-    return `<button class="discard-pile" data-discard-slot="${slot}">
-        <span class="discard-pile-icon">🂠</span>
-        <span class="discard-badge">${cards.length}</span>
-      </button>`;
-  };
-
+  // --- 中央ステータス ---
   const constraint = state.constraints ? state.constraints[mySlot] : null;
   let constraintText = "";
   if (!isEnded && constraint) {
@@ -886,7 +903,19 @@ function renderPlaying(state) {
 
   const myCost = (state.costPool?.[mySlot] || 0) + (state.playerMeta?.[mySlot]?.virtualCostUnused ? "+1" : "");
   const oppCost = (state.costPool?.[opp] || 0) + (state.playerMeta?.[opp]?.virtualCostUnused ? "+1" : "");
+  const seerCount = (state.seerRevealLog?.[mySlot] || []).length;
 
+  let turnChipHtml;
+  if (isEnded) {
+    const won = state.winner === mySlot;
+    turnChipHtml = `<div class="chip turn-chip ${won ? "win-chip" : "lose-chip"}">${won ? "🏆 VICTORY" : "💀 DEFEAT"}</div>`;
+  } else {
+    turnChipHtml = `<div class="chip turn-chip ${isMyTurn ? "my-turn" : "opp-turn"}">${
+      isMyTurn ? "🎯 あなたのターン" : "⌛ 相手のターン"
+    }</div>`;
+  }
+
+  // --- 手札 ---
   const handHtml = (state.hands?.[mySlot] || [])
     .map((card) => {
       const canAct = isMyTurn && state.phase === "needAction";
@@ -907,73 +936,65 @@ function renderPlaying(state) {
     countCitizens(state.hands[mySlot]) === 0 &&
     state.currentTurn === mySlot;
 
-  const seerCount = (state.seerRevealLog?.[mySlot] || []).length;
-
-  const turnChipHtml = isEnded
-    ? `<div class="chip turn-chip ended-chip">🏁 終了</div>`
-    : `<div class="chip turn-chip ${isMyTurn ? "my-turn" : "opp-turn"}">${
-        isMyTurn ? "🎯 あなたのターン" : "⌛ 相手のターン"
-      }</div>`;
-
-  const resultStripHtml = isEnded
-    ? `<div class="result-strip">${
-        state.winner === mySlot ? "🎉 VICTORY" : "💀 DEFEAT"
-      }・${state.reason}・人狼: ${state.wolf.mark}${state.wolf.number}</div>`
-    : "";
-
   const handActionsHtml = isEnded
     ? `<button class="success-btn" id="rematchBtn">🔁 もう一度対戦する</button>
        <button class="danger" id="leaveBtn2">退室する</button>`
-    : `${!isMyTurn ? "" : state.phase === "needDraw" ? `<button id="drawBtn">🎴 山札から引く</button>` : ""}
+    : `${isMyTurn && state.phase === "needDraw" ? `<button id="drawBtn">🎴 山札から引く</button>` : ""}
        ${mulliganAvailable ? `<button class="warning-btn" id="mulliganBtn">🔄 引き直す</button>` : ""}`;
 
   app.innerHTML = `
     <div class="board-screen">
 
-      <!-- 上部ゾーン：相手ステータス -->
-      <div class="zone zone-top">
-        <div class="opp-bar">
-          <span class="opp-chip">P${opp}</span>
-          <span class="opp-chip">✋ ${state.hands?.[opp]?.length ?? 0}</span>
-          <span class="opp-chip">💠 ${oppCost}</span>
+      <!-- ① ヘッダーゾーン -->
+      <div class="zone-header">
+        <div class="opp-hand-mini">
+          <div class="card card-back mini-back"></div>
+          <span class="opp-hand-count">×${oppHandCount}</span>
         </div>
-        <div class="mini-grid-tiny">${citizenGridHtml}</div>
+        <div class="header-right">
+          <button class="leave-btn-mini" id="leaveHeaderBtn">🚪 退室</button>
+          <div class="citizen-mini-grid">${citizenGridHtml}</div>
+        </div>
       </div>
 
-      <!-- 中央ゾーン：バトルフィールド -->
-      <div class="zone zone-battle">
-        <div class="battle-row row-opponent">
-          ${fieldCardsHtml(opp)}
-          ${discardPileHtml(opp)}
-        </div>
-
-        <div class="battle-divider">
-          <div class="divider-row">
-            ${turnChipHtml}
-            <div class="chip">🎴 ${state.drawPile?.length ?? 0}</div>
-            <div class="chip">💠 ${myCost} / ${oppCost}</div>
-            <button class="chip icon-btn" id="logToggleBtn">📜</button>
-            ${seerCount > 0 ? `<button class="chip icon-btn" id="seerToggleBtn">🔮 ${seerCount}</button>` : ""}
-            ${!isEnded ? `<button class="chip accuse-btn" id="accuseFab">⚔️ 告発</button>` : ""}
-          </div>
-          ${state.info?.[mySlot] ? `<div class="chip info-chip">🔎 ${state.info[mySlot]}</div>` : ""}
-          ${constraintText ? `<div class="chip constraint-chip">⚠️ ${constraintText}</div>` : ""}
-        </div>
-
-        <div class="battle-row row-mine">
-          ${fieldCardsHtml(mySlot)}
-          ${discardPileHtml(mySlot)}
-        </div>
-
-        <div class="toast-layer" id="toastLayer"></div>
+      <!-- ② 相手フィールド：役職(外側)→市民(内側) -->
+      <div class="zone-opp-field">
+        <div class="slot-row">${oppRoleRow}</div>
+        <div class="slot-row">${oppCitizenRow}</div>
       </div>
 
-      <!-- 下部ゾーン：自分の手札 -->
-      <div class="zone zone-hand">
-        ${resultStripHtml}
-        <div class="hand-fan">${handHtml}</div>
-        <div class="hand-actions">${handActionsHtml}</div>
+      <!-- ③ 中央ステータス＆アクション -->
+      <div class="zone-center">
+        <div class="center-chip-row">
+          ${turnChipHtml}
+          <div class="chip">🎴 ${state.drawPile?.length ?? 0}</div>
+          <div class="chip">💠 ${myCost} / ${oppCost}</div>
+          <button class="chip icon-btn" id="logToggleBtn">📜</button>
+          ${seerCount > 0 ? `<button class="chip icon-btn" id="seerToggleBtn">🔮 ${seerCount}</button>` : ""}
+          ${!isEnded ? `<button class="chip accuse-btn" id="accuseFab">⚔️ 告発</button>` : ""}
+        </div>
+        ${
+          isEnded
+            ? `<div class="chip">勝因：${state.reason} ／ 人狼：${state.wolf.mark}${state.wolf.number}</div>`
+            : ""
+        }
+        ${state.info?.[mySlot] ? `<div class="chip info-chip">🔎 ${state.info[mySlot]}</div>` : ""}
+        ${constraintText ? `<div class="chip constraint-chip">⚠️ ${constraintText}</div>` : ""}
       </div>
+
+      <!-- ④ 自分フィールド：市民(内側)→役職(外側) -->
+      <div class="zone-my-field">
+        <div class="slot-row">${myCitizenRow}</div>
+        <div class="slot-row">${myRoleRow}</div>
+      </div>
+
+      <!-- ⑤ 自分の手札 -->
+      <div class="zone-hand">
+        <div class="hand-actions-row">${handActionsHtml}</div>
+        <div class="hand-fan-row">${handHtml}</div>
+      </div>
+
+      <div class="toast-layer" id="toastLayer"></div>
     </div>
 
     <div class="sheet-overlay" id="sheetOverlay">
@@ -993,6 +1014,8 @@ function renderPlaying(state) {
   `;
 
   // --- イベントバインド ---
+  document.getElementById("leaveHeaderBtn").onclick = confirmLeaveMidGame;
+
   const drawBtn = document.getElementById("drawBtn");
   if (drawBtn) drawBtn.onclick = () => Game.draw(roomId, mySlot).catch(showError);
 
@@ -1020,19 +1043,6 @@ function renderPlaying(state) {
       } else {
         confirmPlayRole(card);
       }
-    };
-  });
-
-  document.querySelectorAll(".discard-pile").forEach((btn) => {
-    btn.onclick = () => {
-      const slot = btn.dataset.discardSlot;
-      const cards = state.roleDiscard?.[slot] || [];
-      const html = cards.map((c) => cardVisualHtml(c, { extraClass: "battle-card" })).join("");
-      showModal(`
-        <div class="flat-label" style="margin-bottom:10px;">🎭 使用済み役職カード（${slot}）</div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:14px;">${html}</div>
-        <button onclick="window.__closeModal()">閉じる</button>
-      `);
     };
   });
 
@@ -1169,7 +1179,7 @@ window.__mulligan = () => {
   Game.mulligan(roomId, mySlot).catch(showError);
 };
 
-// --- Grokクレジット表記（常時固定表示） ---
+// --- Grokクレジット表記（常時固定表示・右下） ---
 function renderCreditBadge() {
   if (document.getElementById("grokCredit")) return;
   const el = document.createElement("div");
