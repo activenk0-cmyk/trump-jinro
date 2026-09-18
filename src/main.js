@@ -17,12 +17,16 @@ const WIN_COUNT_OPTIONS = [3, 4, 5, 6, 7];
 const JOKER_COST_OPTIONS = [1, 2, 3, 4];
 const SESSION_KEY = "trump_jinro_session";
 
-// --- スプライト割り当て ---
+// --- スプライト割り当て（正確なピクセル切り出し） ---
+// 画像全体：1120 x 928 px、6列 × 5行。
 const SPRITE_SUIT_ORDER = ["♣", "♦", "♥", "♠"];
 const SPRITE_RANK_ORDER = ["1", "2", "3", "4", "J", "Q", "K"];
 const SPRITE_COLS = 6;
-// 各行の background-position-y（Y軸1.4倍マージン補正・指定値）
-const SPRITE_ROW_Y = ["0%", "24.5%", "49.5%", "74.5%", "99.5%"];
+const SPRITE_ROWS = 5;
+const SHEET_W = 1120;
+const SHEET_H = 928;
+const CELL_W = SHEET_W / SPRITE_COLS; // ≒ 186.667
+const CELL_H = SHEET_H / SPRITE_ROWS; // = 185.6
 
 function getSpriteIndex(card) {
   if (card.type === "joker") {
@@ -35,12 +39,17 @@ function getSpriteIndex(card) {
   return suitIdx * 7 + rankIdx;
 }
 
-function spriteBackgroundPosition(index) {
+// カード表示要素の幅(displayW)に合わせて、背景サイズと位置をピクセルで返す。
+// スケール = displayW / CELL_W。背景全体は SHEET_W * スケール の幅で拡大表示する。
+function spriteStyle(index, displayW) {
   const col = index % SPRITE_COLS;
   const row = Math.floor(index / SPRITE_COLS);
-  const x = (col / (SPRITE_COLS - 1)) * 100;
-  const y = SPRITE_ROW_Y[row] || "0%";
-  return `${x}% ${y}`;
+  const scale = displayW / CELL_W;
+  const bgW = SHEET_W * scale;
+  const bgH = SHEET_H * scale;
+  const posX = -(col * CELL_W) * scale;
+  const posY = -(row * CELL_H) * scale;
+  return `background-size:${bgW}px ${bgH}px; background-position:${posX}px ${posY}px;`;
 }
 
 class GameActionError extends Error {
@@ -553,8 +562,11 @@ let unsubscribe = null;
 let lastSeenSeq = 0;
 let endAnnounced = false;
 
+// カード種別ごとの想定表示幅（px）。spriteStyleの倍率計算に使う。
+const CARD_W = { field: 48, hand: 92, deck: 46 };
+
 function cardVisualHtml(card, opts = {}) {
-  const { interactive = false, disabled = true, dataCardId = null, extraClass = "" } = opts;
+  const { interactive = false, disabled = true, dataCardId = null, extraClass = "", displayW = 48 } = opts;
   const disabledAttr = disabled ? "disabled" : "";
   const dataAttr = dataCardId ? `data-card-id="${dataCardId}"` : "";
   const interactiveClass = interactive ? "interactive" : "";
@@ -564,7 +576,7 @@ function cardVisualHtml(card, opts = {}) {
   }
 
   const idx = getSpriteIndex(card);
-  const pos = idx !== null ? spriteBackgroundPosition(idx) : "0% 0%";
+  const styleSprite = idx !== null ? spriteStyle(idx, displayW) : "";
   const frameClass =
     card.type === "citizen"
       ? RED_MARKS.includes(card.mark) ? "suit-red" : "suit-black"
@@ -574,10 +586,9 @@ function cardVisualHtml(card, opts = {}) {
 
   return `<button ${disabledAttr} ${dataAttr}
       class="card ${frameClass} ${interactiveClass} ${extraClass}"
-      style="background-image:url('/cards.png'); background-position:${pos};"></button>`;
+      style="background-image:url('/cards.png'); ${styleSprite}"></button>`;
 }
 
-// 手札専用：カード種別で枠クラスを分ける（市民=銀 / 役職=金）
 function handCardHtml(card, canAct) {
   const kindClass = card.type === "citizen" ? "citizen-hand" : "role-hand";
   return cardVisualHtml(card, {
@@ -585,11 +596,12 @@ function handCardHtml(card, canAct) {
     disabled: !canAct,
     dataCardId: card.id,
     extraClass: "hand-card " + kindClass,
+    displayW: CARD_W.hand,
   });
 }
 
 function renderSlotsHtml(cards, minSlots, extraClass) {
-  const items = cards.map((c) => cardVisualHtml(c, { extraClass }));
+  const items = cards.map((c) => cardVisualHtml(c, { extraClass, displayW: CARD_W.field }));
   const totalSlots = Math.max(minSlots, items.length);
   while (items.length < totalSlots) items.push(`<div class="field-slot empty"></div>`);
   return items.join("");
@@ -841,11 +853,8 @@ function renderPlaying(state) {
   const myCost = (state.costPool?.[mySlot] || 0) + (state.playerMeta?.[mySlot]?.virtualCostUnused ? "+1" : "");
   const oppCost = (state.costPool?.[opp] || 0) + (state.playerMeta?.[opp]?.virtualCostUnused ? "+1" : "");
 
-  const seerLog = state.seerRevealLog?.[mySlot] || [];
-  // 「安全な数字（マーク）」を抽出（表示の横並び用）
-  const seerValues = (state.seerHistory?.[mySlot] || []);
+  const seerValues = state.seerHistory?.[mySlot] || [];
   const seerLabel = mySlot === "A" ? "安全な数字" : "安全なマーク";
-  const latestSeerText = seerLog.length > 0 ? seerLog[seerLog.length - 1] : "";
 
   let turnChipHtml;
   if (isEnded) {
@@ -873,29 +882,34 @@ function renderPlaying(state) {
     : `${isMyTurn && state.phase === "needDraw" ? `<button id="drawBtn">🎴 山札から引く</button>` : ""}
        ${mulliganAvailable ? `<button class="warning-btn" id="mulliganBtn">🔄 引き直す</button>` : ""}`;
 
-  // 中央上段：中央メッセージ（初期情報＋制約）
-  let centerMessage = state.info?.[mySlot] ? `🔎 ${state.info[mySlot]}` : "";
-  if (isEnded) centerMessage = `勝因：${state.reason} ／ 人狼：${state.wolf.mark}${state.wolf.number}`;
-  const centerConstraint = constraintText ? `<span class="constraint-txt">⚠️ ${constraintText}</span>` : "";
+  // 中央上段の見出し
+  let headline = "&nbsp;";
+  if (isEnded) headline = `勝因：${state.reason}`;
 
-  // 中央下段：占い師で把握した安全情報の横並び
-  const seerRow = `
-    <span class="seer-label">占い師で把握した${seerLabel}：</span>
-    ${seerValues.length > 0
-      ? seerValues.map((v) => `<span class="seer-item">${v}</span>`).join("")
-      : `<span style="opacity:0.6;">まだありません</span>`}`;
+  // 人狼ヒント行（初期情報＋制約）：ターン等の下、占い師行の上
+  const wolfHint = state.info?.[mySlot] ? `🔎 ${state.info[mySlot]}` : "";
+  const constraintLine = constraintText ? `<span class="constraint-txt">⚠️ ${constraintText}</span>` : "";
+  const wolfHintRowHtml =
+    !isEnded && (wolfHint || constraintLine)
+      ? `<div class="wolf-hint-row">${wolfHint}${constraintLine}</div>`
+      : "";
+
+  const seerRowHtml = `
+    <div class="center-seer-row">
+      <span class="seer-label">占い師で把握した${seerLabel}：</span>
+      ${seerValues.length > 0
+        ? seerValues.map((v) => `<span class="seer-item">${v}</span>`).join("")
+        : `<span style="opacity:0.6;">まだありません</span>`}
+    </div>`;
 
   app.innerHTML = `
     <div class="board-screen">
 
-      <!-- ① ヘッダー -->
+      <!-- ① ヘッダー（コスト表示はここから撤去） -->
       <div class="zone-header">
-        <div class="opp-hand-block">
-          <div class="opp-hand-mini">
-            <div class="card card-back mini-back"></div>
-            <span class="opp-hand-count">×${oppHandCount}</span>
-          </div>
-          <div class="opp-cost-line">コスト：${oppCost}</div>
+        <div class="opp-hand-mini">
+          <div class="card card-back mini-back"></div>
+          <span class="opp-hand-count">×${oppHandCount}</span>
         </div>
         <div class="header-right">
           <button class="leave-btn-mini" id="leaveHeaderBtn">🚪 退室</button>
@@ -903,20 +917,17 @@ function renderPlaying(state) {
         </div>
       </div>
 
-      <!-- ② 相手フィールド：役職(外)→市民(内) -->
+      <!-- ② 相手フィールド -->
       <div class="zone-opp-field">
         <div class="slot-row">${oppRoleRow}</div>
         <div class="slot-row">${oppCitizenRow}</div>
       </div>
 
-      <!-- ③ 中央ステータス（2段） -->
+      <!-- ③ 中央ステータス -->
       <div class="zone-center">
         <div class="center-top-row">
           <button class="center-log-btn" id="logToggleBtn">📜</button>
-          <div class="center-message">
-            ${centerMessage || (latestSeerText ? `🔮 ${latestSeerText}` : "&nbsp;")}
-            ${centerConstraint}
-          </div>
+          <div class="center-headline">${headline}</div>
           <div class="deck-pile">
             <span class="deck-pile-label">山札</span>
             <span class="deck-pile-count">${state.drawPile?.length ?? 0}枚</span>
@@ -925,14 +936,20 @@ function renderPlaying(state) {
 
         <div class="center-action-row">
           ${turnChipHtml}
-          <div class="chip">💠 ${myCost}</div>
           ${!isEnded ? `<button class="accuse-btn" id="accuseFab">⚔️ 告発</button>` : ""}
         </div>
 
-        <div class="center-bottom-row">${seerRow}</div>
+        <div class="cost-line">
+          <span class="cost-mine">あなたのコスト：${myCost}</span>
+          <span class="cost-opp">相手のコスト：${oppCost}</span>
+        </div>
+
+        ${wolfHintRowHtml}
+
+        ${seerRowHtml}
       </div>
 
-      <!-- ④ 自分フィールド：市民(内)→役職(外) -->
+      <!-- ④ 自分フィールド -->
       <div class="zone-my-field">
         <div class="slot-row">${myCitizenRow}</div>
         <div class="slot-row">${myRoleRow}</div>
