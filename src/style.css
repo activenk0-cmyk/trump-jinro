@@ -20,7 +20,6 @@ body {
   background-attachment: fixed;
 }
 
-/* 荘厳な魔法陣風の背景演出（画像不要・CSSのみ） */
 body::before {
   content: "";
   position: fixed;
@@ -49,7 +48,6 @@ body::after {
 
 h1, h2, h3 { font-family: "Cinzel", "Noto Sans JP", serif; }
 
-/* ランディング／待機画面用の余白ラッパー（盤面画面はこれを使わずフルブリード） */
 .page-pad { padding: 14px 14px 90px; }
 
 button {
@@ -217,7 +215,7 @@ label { font-size: 12px; color: #b9adf0; display: block; margin-bottom: 4px; let
 .log-box { max-height: 50vh; overflow-y: auto; background: rgba(8,6,20,0.65); border-radius: 10px; padding: 9px; font-size: 12px; color: #b6aee0; border: 1px solid rgba(255,255,255,0.06); }
 .log-box div { margin-bottom: 4px; }
 
-/* ===================== カード共通（CSSスプライト・テキスト一切なし） ===================== */
+/* ===================== カード共通（CSSスプライト・テキストなし） ===================== */
 .card {
   position: relative;
   aspect-ratio: 175 / 174;
@@ -268,72 +266,85 @@ label { font-size: 12px; color: #b9adf0; display: block; margin-bottom: 4px; let
 .card.interactive:not(:disabled):active { transform: translateY(-3px) scale(0.98); }
 .card:disabled { opacity: 1; filter: grayscale(55%) brightness(0.55); cursor: not-allowed; }
 
-/* ===================== 盤面（TCGボード）レイアウト ===================== */
+/* ===================== 対戦盤面（TCGボード）：1画面固定レイアウト ===================== */
 .board-screen {
   height: 100dvh;
   height: 100vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 8px 8px 0;
+  padding: 6px 8px 8px;
   gap: 4px;
   position: relative;
 }
 
-/* --- 上部ゾーン：相手ステータス --- */
-.zone-top { flex: 0 0 auto; }
-.opp-bar { display: flex; gap: 6px; justify-content: center; margin-bottom: 5px; flex-wrap: wrap; }
-.opp-chip {
-  background: rgba(255,255,255,0.06); border: 1px solid rgba(255,95,109,0.25);
-  border-radius: 20px; padding: 3px 10px; font-size: 11px; color: #f0e0e2;
-  text-shadow: 0 1px 2px rgba(0,0,0,.6);
+/* ---- ① ヘッダーゾーン ---- */
+.zone-header {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
 }
-.mini-grid-tiny { display: grid; grid-template-columns: repeat(16, 1fr); gap: 2px; }
-.mini-grid-tiny .card { border-width: 1px; border-radius: 3px; }
-.mini-grid-tiny .card.played { filter: grayscale(80%) brightness(0.35); }
+.opp-hand-mini { display: flex; align-items: center; gap: 6px; }
+.mini-back { width: 26px; }
+.opp-hand-count { font-size: 12px; font-weight: 800; color: #d8c4ff; text-shadow: 0 1px 2px rgba(0,0,0,.7); }
 
-/* --- 中央ゾーン：バトルフィールド --- */
-.zone-battle {
-  flex: 1 1 auto;
+.header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.leave-btn-mini {
+  font-size: 10px; padding: 4px 9px; border-radius: 8px;
+  background: linear-gradient(150deg, #ff5f6d, #a51c30);
+}
+.citizen-mini-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; width: 96px;
+}
+.status-cell {
+  font-size: 9px; font-weight: 800; text-align: center; padding: 3px 0; border-radius: 3px;
+  background: rgba(255,255,255,0.08); text-shadow: 0 1px 2px rgba(0,0,0,.6);
+}
+.status-cell.mark-black { color: #d8dcff; }
+.status-cell.mark-red { color: #ff96a0; }
+.status-cell.played { opacity: 0.3; background: rgba(0,0,0,0.45); filter: grayscale(70%); }
+
+/* ---- ② ④ フィールド共通（相手／自分） ---- */
+.zone-opp-field, .zone-my-field {
+  flex: 1 1 0;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  min-height: 0;
-  position: relative;
-  padding: 2px 0;
-}
-.battle-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 58px;
-  overflow-x: auto;
-  padding: 2px 4px;
   justify-content: center;
+  gap: 3px;
+  min-height: 0;
 }
-.card.battle-card { width: 52px; }
+.slot-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.slot-row .card.field-card,
+.slot-row .field-slot.empty {
+  flex: 1 1 0;
+  min-width: 26px;
+  max-width: 60px;
+}
+.field-slot.empty {
+  aspect-ratio: 175 / 174;
+  border-radius: 8px;
+  border: 1.5px dashed rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.02);
+}
 
-.discard-pile {
-  width: 40px; aspect-ratio: 175/174; border-radius: 8px; flex-shrink: 0;
-  background: linear-gradient(160deg, #3a2f5c, #1b1633);
-  border: 1px dashed rgba(255,215,0,0.4);
-  display: flex; align-items: center; justify-content: center;
-  position: relative; padding: 0;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+/* ---- ③ 中央ステータス＆アクション ---- */
+.zone-center {
+  flex: 1.3 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 0;
 }
-.discard-pile-icon { font-size: 16px; opacity: 0.8; }
-.discard-badge {
-  position: absolute; top: -5px; right: -5px;
-  background: #ffd700; color: #1a0d00; font-size: 10px; font-weight: 900;
-  border-radius: 50%; width: 17px; height: 17px; display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+.center-chip-row {
+  display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; align-items: center;
 }
-
-.battle-divider {
-  display: flex; flex-direction: column; align-items: center; gap: 5px;
-  padding: 4px 0;
-}
-.divider-row { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
 .chip {
   border-radius: 20px; padding: 5px 12px; font-size: 11px; font-weight: 700;
   background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
@@ -343,7 +354,8 @@ label { font-size: 12px; color: #b9adf0; display: block; margin-bottom: 4px; let
 .chip.turn-chip { font-weight: 900; letter-spacing: 0.02em; }
 .chip.turn-chip.my-turn { border-color: #ffd700; color: #fff3c4; box-shadow: 0 0 16px rgba(255,215,0,.5); animation: goldPulse 1.8s ease-in-out infinite; }
 .chip.turn-chip.opp-turn { border-color: #7a5fff; color: #cfc7ff; box-shadow: 0 0 10px rgba(122,95,255,.3); }
-.chip.turn-chip.ended-chip { border-color: #999; color: #ccc; }
+.chip.turn-chip.win-chip { border-color: #4ade80; color: #9ef29a; box-shadow: 0 0 16px rgba(74,222,128,.5); }
+.chip.turn-chip.lose-chip { border-color: #ff5f6d; color: #ffb3b8; box-shadow: 0 0 16px rgba(255,95,109,.4); }
 @keyframes goldPulse {
   0%, 100% { box-shadow: 0 0 10px rgba(255,215,0,.4); }
   50%      { box-shadow: 0 0 22px rgba(255,215,0,.8); }
@@ -354,7 +366,7 @@ label { font-size: 12px; color: #b9adf0; display: block; margin-bottom: 4px; let
 
 /* トースト（ターン交代の演出通知） */
 .toast-layer {
-  position: absolute; inset: 0; z-index: 60;
+  position: fixed; inset: 0; z-index: 60;
   display: flex; align-items: center; justify-content: center;
   pointer-events: none;
 }
@@ -373,29 +385,53 @@ label { font-size: 12px; color: #b9adf0; display: block; margin-bottom: 4px; let
 .toast-title { font-size: 14px; font-weight: 800; color: #fff3c4; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
 .toast-sub { font-size: 12px; color: #cabdf0; margin-top: 4px; }
 
-/* --- 下部ゾーン：自分の手札 --- */
-.zone-hand { flex: 0 0 auto; padding-bottom: 12px; }
-.result-strip {
-  text-align: center; font-size: 13px; font-weight: 800; padding: 8px; border-radius: 12px;
-  margin-bottom: 8px; text-shadow: 0 1px 3px rgba(0,0,0,.7);
-  background: linear-gradient(160deg, rgba(138,63,252,0.22), rgba(14,11,28,0.5));
-  border: 1px solid rgba(255,215,0,0.28);
+/* ---- ⑤ 自分の手札 ---- */
+.zone-hand {
+  flex: 2.1 1 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 0;
 }
-.hand-fan {
+.hand-actions-row {
+  display: flex; gap: 8px; justify-content: center; margin-bottom: 6px;
+}
+.hand-actions-row button { flex: 0 1 160px; }
+.hand-fan-row {
   display: flex;
   justify-content: center;
+  align-items: flex-end;
   overflow-x: auto;
   overflow-y: visible;
-  padding: 14px 24px 4px;
+  padding: 16px 20px 4px;
 }
 .card.hand-card {
-  width: 82px;
-  margin-left: -24px;
+  width: clamp(64px, 20vw, 92px);
+  margin-left: -22px;
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 .card.hand-card:first-child { margin-left: 0; }
-.hand-actions { display: flex; gap: 8px; margin-top: 8px; padding: 0 4px; }
-.hand-actions button { flex: 1; }
+
+/* 手札フレームの差別化：市民＝シルバー〜ブロンズ／役職＝金×紫の強い発光 */
+.card.hand-card.suit-black {
+  border-color: #d9d9e0;
+  box-shadow: 0 4px 10px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.18), 0 0 10px rgba(200,200,215,.4);
+}
+.card.hand-card.suit-red {
+  border-color: #d8a662;
+  box-shadow: 0 4px 10px rgba(0,0,0,.6), inset 0 0 0 1px rgba(255,255,255,.14), 0 0 10px rgba(216,166,98,.4);
+}
+@keyframes roleGlowPulse {
+  0%, 100% { box-shadow: 0 4px 14px rgba(0,0,0,.6), 0 0 18px rgba(255,215,0,.6), 0 0 30px rgba(170,80,255,.32), inset 0 0 0 1px rgba(255,255,255,.2); }
+  50%      { box-shadow: 0 4px 14px rgba(0,0,0,.6), 0 0 32px rgba(255,215,0,.9), 0 0 55px rgba(170,80,255,.55), inset 0 0 0 1px rgba(255,255,255,.3); }
+}
+.card.hand-card.role-frame {
+  border-color: #ffd700;
+  animation: roleGlowPulse 2.2s ease-in-out infinite;
+}
+.card.hand-card.joker-frame {
+  box-shadow: 0 4px 14px rgba(0,0,0,.6), 0 0 26px rgba(255,255,255,.55);
+}
 
 /* ===================== 決着スプラッシュ（フルスクリーン） ===================== */
 .end-overlay {
@@ -417,9 +453,9 @@ label { font-size: 12px; color: #b9adf0; display: block; margin-bottom: 4px; let
 .end-overlay-title.defeat { color: #ff5f6d; text-shadow: 0 0 30px rgba(255,95,109,0.7); }
 .end-overlay-sub { font-size: 13px; color: #d8c4ff; margin-bottom: 20px; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
 
-/* ===================== クレジット表記 ===================== */
+/* ===================== クレジット表記（右下） ===================== */
 .grok-credit {
-  position: fixed; left: 10px; bottom: 8px; z-index: 200;
+  position: fixed; right: 10px; bottom: 8px; z-index: 200;
   font-size: 10px; color: rgba(255,255,255,0.6);
   background: rgba(8,4,18,0.55);
   padding: 4px 9px; border-radius: 20px;
