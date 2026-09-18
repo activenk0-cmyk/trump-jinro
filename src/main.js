@@ -18,8 +18,6 @@ const JOKER_COST_OPTIONS = [1, 2, 3, 4];
 const SESSION_KEY = "trump_jinro_session";
 
 // --- カードスプライト（public/cards.png）の割り当てロジック ---
-// シートは ♣→♦→♥→♠ の順に「1,2,3,4,J,Q,K」を7枚ずつ（計28枚）＋ジョーカー2枚、
-// 6列×5行で並んでいる。
 const SPRITE_SUIT_ORDER = ["♣", "♦", "♥", "♠"];
 const SPRITE_RANK_ORDER = ["1", "2", "3", "4", "J", "Q", "K"];
 const SPRITE_COLS = 6;
@@ -576,7 +574,7 @@ let unsubscribe = null;
 let lastSeenSeq = 0;
 let endAnnounced = false;
 
-// --- カードのビジュアル生成（CSSスプライト適用） ---
+// --- カードのビジュアル生成（CSSスプライト・テキストなし） ---
 function cardVisualHtml(card, opts = {}) {
   const { interactive = false, disabled = true, dataCardId = null, extraClass = "" } = opts;
   const disabledAttr = disabled ? "disabled" : "";
@@ -595,26 +593,18 @@ function cardVisualHtml(card, opts = {}) {
       : card.type === "role"
       ? "role-frame"
       : "joker-frame";
-  const corner =
-    card.type === "citizen" ? card.mark + card.number : card.type === "role" ? card.role : "JOKER";
 
   return `<button ${disabledAttr} ${dataAttr}
       class="card ${frameClass} ${interactiveClass} ${extraClass}"
-      style="background-image:url('/cards.png'); background-position:${pos};">
-      <span class="card-corner">${corner}</span>
-    </button>`;
+      style="background-image:url('/cards.png'); background-position:${pos};"></button>`;
 }
 
 function miniCitizenCardHtml(mark, num, played) {
-  const card = { type: "citizen", mark, number: num };
-  const idx = getSpriteIndex(card);
+  const idx = getSpriteIndex({ type: "citizen", mark, number: num });
   const pos = spriteBackgroundPosition(idx);
   const frameClass = RED_MARKS.includes(mark) ? "suit-red" : "suit-black";
-  const corner = played ? "済" : mark + num;
   return `<div class="card mini-card ${frameClass} ${played ? "played" : ""}"
-      style="background-image:url('/cards.png'); background-position:${pos};">
-      <span class="card-corner">${corner}</span>
-    </div>`;
+      style="background-image:url('/cards.png'); background-position:${pos};"></div>`;
 }
 
 function showModal(html) {
@@ -623,7 +613,8 @@ function showModal(html) {
   overlay.classList.add("show");
 }
 function closeModal() {
-  document.getElementById("modalOverlay").classList.remove("show");
+  const overlay = document.getElementById("modalOverlay");
+  if (overlay) overlay.classList.remove("show");
 }
 function showSimpleModal(text) {
   showModal(`<div class="big-text">${text}</div><button onclick="window.__closeModal()">閉じる</button>`);
@@ -637,30 +628,70 @@ function openSheet() {
   document.getElementById("sheetOverlay").classList.add("show");
 }
 function closeSheet() {
-  document.getElementById("sheetOverlay").classList.remove("show");
+  const overlay = document.getElementById("sheetOverlay");
+  if (overlay) overlay.classList.remove("show");
 }
 
 const modalOverlayHtml = `<div class="modal-overlay" id="modalOverlay"><div class="modal-box"><div id="modalContent"></div></div></div>`;
 
+// --- ターン交代トースト（自動で消える演出通知） ---
+function showToast(titleHtml, subHtml) {
+  const layer = document.getElementById("toastLayer");
+  if (!layer) return;
+  const el = document.createElement("div");
+  el.className = "toast-banner";
+  el.innerHTML = `<div class="toast-title">${titleHtml}</div><div class="toast-sub">${subHtml}</div>`;
+  layer.appendChild(el);
+  requestAnimationFrame(() => el.classList.add("show"));
+  setTimeout(() => {
+    el.classList.remove("show");
+    setTimeout(() => el.remove(), 350);
+  }, 2200);
+}
+
+// --- 決着スプラッシュ（フルスクリーン） ---
+function showEndOverlay(state) {
+  if (document.getElementById("endOverlay")) return;
+  const won = state.winner === mySlot;
+  const el = document.createElement("div");
+  el.id = "endOverlay";
+  el.className = "end-overlay";
+  el.innerHTML = `
+    <div class="end-overlay-inner">
+      <div class="end-overlay-title ${won ? "victory" : "defeat"}">${won ? "VICTORY" : "DEFEAT"}</div>
+      <div class="end-overlay-sub">勝因：${state.reason} ／ 人狼の正体：${state.wolf.mark}${state.wolf.number}</div>
+      <button class="success-btn" id="endOverlayCloseBtn">結果を見る</button>
+    </div>
+  `;
+  document.body.appendChild(el);
+  requestAnimationFrame(() => el.classList.add("show"));
+  document.getElementById("endOverlayCloseBtn").onclick = () => {
+    el.classList.remove("show");
+    setTimeout(() => el.remove(), 350);
+  };
+}
+
 // --- 画面：ランディング（部屋を作る／入る） ---
 function renderLandingScreen() {
   app.innerHTML = `
-    <div class="landing-wrap">
-      <div class="landing-logo">🐺</div>
-      <div class="landing-title">トランプ人狼</div>
-      <div class="landing-sub">DUAL BLIND DUEL</div>
-      <div class="landing-buttons">
-        <button class="hero-btn hero-btn-create" id="createRoomBtn">
-          <span class="hero-btn-icon">🏰</span><span>部屋を作る</span>
-        </button>
-        <button class="hero-btn hero-btn-join" id="showJoinFormBtn">
-          <span class="hero-btn-icon">🚪</span><span>部屋に入る</span>
-        </button>
-      </div>
-      <div class="join-form" id="joinForm" style="display:none;">
-        <label>ルームID</label>
-        <input type="text" id="joinIdInput" placeholder="例：AB3XQ9" maxlength="6" />
-        <button class="hero-btn-join-submit" id="submitJoinBtn">入室する</button>
+    <div class="page-pad">
+      <div class="landing-wrap">
+        <div class="landing-logo">🐺</div>
+        <div class="landing-title">トランプ人狼</div>
+        <div class="landing-sub">DUAL BLIND DUEL</div>
+        <div class="landing-buttons">
+          <button class="hero-btn hero-btn-create" id="createRoomBtn">
+            <span class="hero-btn-icon">🏰</span><span>部屋を作る</span>
+          </button>
+          <button class="hero-btn hero-btn-join" id="showJoinFormBtn">
+            <span class="hero-btn-icon">🚪</span><span>部屋に入る</span>
+          </button>
+        </div>
+        <div class="join-form" id="joinForm" style="display:none;">
+          <label>ルームID</label>
+          <input type="text" id="joinIdInput" placeholder="例：AB3XQ9" maxlength="6" />
+          <button class="hero-btn-join-submit" id="submitJoinBtn">入室する</button>
+        </div>
       </div>
     </div>
     ${modalOverlayHtml}
@@ -674,7 +705,7 @@ function renderLandingScreen() {
 }
 
 function renderLoading() {
-  app.innerHTML = `<div class="landing-wrap"><div class="loading-text">読み込み中...</div></div>${modalOverlayHtml}`;
+  app.innerHTML = `<div class="page-pad"><div class="landing-wrap"><div class="loading-text">読み込み中...</div></div></div>${modalOverlayHtml}`;
 }
 
 async function handleCreateRoom() {
@@ -720,7 +751,10 @@ function startWatching() {
       return;
     }
     renderGame(state);
-    maybeAnnounceEnd(state);
+    if (state.status === "ended" && !endAnnounced) {
+      endAnnounced = true;
+      showEndOverlay(state);
+    }
   });
 }
 
@@ -730,6 +764,8 @@ function leaveRoom() {
   roomId = null;
   mySlot = null;
   clearSession();
+  const existingOverlay = document.getElementById("endOverlay");
+  if (existingOverlay) existingOverlay.remove();
   renderLandingScreen();
 }
 
@@ -741,40 +777,42 @@ function renderGame(state) {
 
 function renderWaiting(state) {
   app.innerHTML = `
-    <div class="duel-header"><div class="duel-title">🐺 トランプ人狼</div></div>
+    <div class="page-pad">
+      <div class="duel-header"><div class="duel-title">🐺 トランプ人狼</div></div>
 
-    <div class="room-id-card">
-      <div class="room-id-label">ROOM ID</div>
-      <div class="room-id-value">${roomId}</div>
-      <button class="copy-btn" id="copyIdBtn">📋 コピー</button>
-    </div>
-
-    <div class="waiting-panel flat-section panel">
-      <div class="flat-label">🕒 対戦相手を待っています</div>
-      <div class="player-slot-row">
-        <div class="player-slot ${state.players.A ? "ready" : ""}">A ${state.players.A ? "✅" : "…"}</div>
-        <div class="vs-mark">VS</div>
-        <div class="player-slot ${state.players.B ? "ready" : ""}">B ${state.players.B ? "✅" : "…"}</div>
+      <div class="room-id-card">
+        <div class="room-id-label">ROOM ID</div>
+        <div class="room-id-value">${roomId}</div>
+        <button class="copy-btn" id="copyIdBtn">📋 コピー</button>
       </div>
-    </div>
 
-    <div class="settings-panel">
-      <label>初期情報タイプ</label>
-      <select id="infoTypeSelect">
-        <option value="除外" ${state.settings.infoType === "除外" ? "selected" : ""}>除外（〇ではない）</option>
-        <option value="確定" ${state.settings.infoType === "確定" ? "selected" : ""}>確定（〇である）</option>
-      </select>
-      <label>勝利条件の枚数（3〜7枚）</label>
-      <select id="winCountSelect">
-        ${WIN_COUNT_OPTIONS.map((n) => `<option value="${n}" ${state.settings.winCount === n ? "selected" : ""}>${n}枚</option>`).join("")}
-      </select>
-      <label>ジョーカーの使用コスト（1〜4）</label>
-      <select id="jokerCostSelect">
-        ${JOKER_COST_OPTIONS.map((n) => `<option value="${n}" ${state.settings.jokerCost === n ? "selected" : ""}>コスト${n}</option>`).join("")}
-      </select>
-      <button class="secondary" id="saveSettingsBtn">設定を保存</button>
-      <button class="hero-btn-create" id="startBtn" ${!(state.players.A && state.players.B) ? "disabled" : ""}>⚔️ ゲーム開始</button>
-      <button class="danger" id="leaveBtn">退室する</button>
+      <div class="waiting-panel flat-section panel">
+        <div class="flat-label">🕒 対戦相手を待っています</div>
+        <div class="player-slot-row">
+          <div class="player-slot ${state.players.A ? "ready" : ""}">A ${state.players.A ? "✅" : "…"}</div>
+          <div class="vs-mark">VS</div>
+          <div class="player-slot ${state.players.B ? "ready" : ""}">B ${state.players.B ? "✅" : "…"}</div>
+        </div>
+      </div>
+
+      <div class="settings-panel">
+        <label>初期情報タイプ</label>
+        <select id="infoTypeSelect">
+          <option value="除外" ${state.settings.infoType === "除外" ? "selected" : ""}>除外（〇ではない）</option>
+          <option value="確定" ${state.settings.infoType === "確定" ? "selected" : ""}>確定（〇である）</option>
+        </select>
+        <label>勝利条件の枚数（3〜7枚）</label>
+        <select id="winCountSelect">
+          ${WIN_COUNT_OPTIONS.map((n) => `<option value="${n}" ${state.settings.winCount === n ? "selected" : ""}>${n}枚</option>`).join("")}
+        </select>
+        <label>ジョーカーの使用コスト（1〜4）</label>
+        <select id="jokerCostSelect">
+          ${JOKER_COST_OPTIONS.map((n) => `<option value="${n}" ${state.settings.jokerCost === n ? "selected" : ""}>コスト${n}</option>`).join("")}
+        </select>
+        <button class="secondary" id="saveSettingsBtn">設定を保存</button>
+        <button class="hero-btn-create" id="startBtn" ${!(state.players.A && state.players.B) ? "disabled" : ""}>⚔️ ゲーム開始</button>
+        <button class="danger" id="leaveBtn">退室する</button>
+      </div>
     </div>
     ${modalOverlayHtml}
   `;
@@ -820,45 +858,34 @@ function renderPlaying(state) {
       if (c.type === "citizen") playedSet.add(c.mark + c.number);
     })
   );
-
   const citizenGridHtml = MARKS.map((mark) =>
     NUMBERS.map((num) => miniCitizenCardHtml(mark, num, playedSet.has(mark + num))).join("")
   ).join("");
 
-  const tableRow = (slot) => {
-    const label = slot === mySlot ? `あなたの場(${slot})` : `相手の場(${slot})`;
-    const cards = (state.table[slot] || [])
-      .map((c) => cardVisualHtml(c, { extraClass: "mini-field-card" }))
-      .join("");
-    return `<div class="field-row"><div class="field-label">${label}</div><div class="card-list">${cards}</div></div>`;
-  };
-  const discardRow = (slot) => {
-    const cards = (state.roleDiscard?.[slot] || [])
-      .map((c) => cardVisualHtml(c, { extraClass: "mini-field-card" }))
-      .join("");
-    return `<div class="field-row"><div class="field-label">🎭 使用済(${slot})</div><div class="card-list">${cards}</div></div>`;
-  };
+  const fieldCardsHtml = (slot) =>
+    (state.table[slot] || []).map((c) => cardVisualHtml(c, { extraClass: "battle-card" })).join("");
 
-  const seerLogHtml =
-    state.seerRevealLog && state.seerRevealLog[mySlot] && state.seerRevealLog[mySlot].length > 0
-      ? `<div class="flat-section panel">
-           <div class="flat-label">🔮 占い師の履歴（あなただけ）</div>
-           <div class="log-box">${state.seerRevealLog[mySlot].map((t, i) => `<div>${i + 1}回目：${t}</div>`).join("")}</div>
-         </div>`
-      : "";
+  const discardPileHtml = (slot) => {
+    const cards = state.roleDiscard?.[slot] || [];
+    if (cards.length === 0) return "";
+    return `<button class="discard-pile" data-discard-slot="${slot}">
+        <span class="discard-pile-icon">🂠</span>
+        <span class="discard-badge">${cards.length}</span>
+      </button>`;
+  };
 
   const constraint = state.constraints ? state.constraints[mySlot] : null;
   let constraintText = "";
   if (!isEnded && constraint) {
     if (constraint.type === "forceAttribute")
-      constraintText = `「${constraint.value}」の市民カードを出す必要があります（手札になければ自由）。`;
+      constraintText = `「${constraint.value}」の市民カードを出す必要があります`;
     if (constraint.type === "blockRoles")
-      constraintText = "役職カードが出せません。市民カードを出す必要があります（手札になければ自由）。";
-    if (constraint.type === "forceAccuse") constraintText = "今回は告発しか行えません。";
+      constraintText = "役職カードが出せません。市民カードを出してください";
+    if (constraint.type === "forceAccuse") constraintText = "今回は告発しか行えません";
   }
 
-  const myCost = (state.costPool?.[mySlot] || 0) + (state.playerMeta?.[mySlot]?.virtualCostUnused ? "(+1)" : "");
-  const oppCost = (state.costPool?.[opp] || 0) + (state.playerMeta?.[opp]?.virtualCostUnused ? "(+1)" : "");
+  const myCost = (state.costPool?.[mySlot] || 0) + (state.playerMeta?.[mySlot]?.virtualCostUnused ? "+1" : "");
+  const oppCost = (state.costPool?.[opp] || 0) + (state.playerMeta?.[opp]?.virtualCostUnused ? "+1" : "");
 
   const handHtml = (state.hands?.[mySlot] || [])
     .map((card) => {
@@ -880,77 +907,74 @@ function renderPlaying(state) {
     countCitizens(state.hands[mySlot]) === 0 &&
     state.currentTurn === mySlot;
 
-  const endedHtml = isEnded
-    ? `<div class="flat-section">
-        <div class="end-banner">
-          <div class="big-text">${
-            state.winner === mySlot
-              ? '<span class="result-safe">🎉 あなたの勝ちです！</span>'
-              : '<span class="result-out">残念、あなたの負けです</span>'
-          }</div>
-          <div style="color:#ccc;font-size:13px;">勝因：${state.reason} ／ 人狼の正体：${state.wolf.mark}${state.wolf.number}</div>
-        </div>
-        <button class="success-btn" id="rematchBtn">🔁 同じルームでもう一度対戦する</button>
-        <button class="danger" id="leaveBtn2">退室する</button>
-      </div>`
+  const seerCount = (state.seerRevealLog?.[mySlot] || []).length;
+
+  const turnChipHtml = isEnded
+    ? `<div class="chip turn-chip ended-chip">🏁 終了</div>`
+    : `<div class="chip turn-chip ${isMyTurn ? "my-turn" : "opp-turn"}">${
+        isMyTurn ? "🎯 あなたのターン" : "⌛ 相手のターン"
+      }</div>`;
+
+  const resultStripHtml = isEnded
+    ? `<div class="result-strip">${
+        state.winner === mySlot ? "🎉 VICTORY" : "💀 DEFEAT"
+      }・${state.reason}・人狼: ${state.wolf.mark}${state.wolf.number}</div>`
     : "";
 
+  const handActionsHtml = isEnded
+    ? `<button class="success-btn" id="rematchBtn">🔁 もう一度対戦する</button>
+       <button class="danger" id="leaveBtn2">退室する</button>`
+    : `${!isMyTurn ? "" : state.phase === "needDraw" ? `<button id="drawBtn">🎴 山札から引く</button>` : ""}
+       ${mulliganAvailable ? `<button class="warning-btn" id="mulliganBtn">🔄 引き直す</button>` : ""}`;
+
   app.innerHTML = `
-    <div class="sticky-bar ${isEnded ? "" : isMyTurn ? "my-turn" : "opp-turn"}">
-      ${
-        isEnded
-          ? "🏁 ゲーム終了"
-          : isMyTurn
-          ? "🎯 あなたのターン（" + (state.phase === "needDraw" ? "引く番" : "出す番") + "）"
-          : "⌛ 相手（プレイヤー" + state.currentTurn + "）のターン"
-      }
-    </div>
+    <div class="board-screen">
 
-    ${state.info && state.info[mySlot] ? `<div class="info-line">🔎 ${state.info[mySlot]}</div>` : ""}
-    ${constraintText ? `<div class="constraint-line">⚠️ ${constraintText}</div>` : ""}
+      <!-- 上部ゾーン：相手ステータス -->
+      <div class="zone zone-top">
+        <div class="opp-bar">
+          <span class="opp-chip">P${opp}</span>
+          <span class="opp-chip">✋ ${state.hands?.[opp]?.length ?? 0}</span>
+          <span class="opp-chip">💠 ${oppCost}</span>
+        </div>
+        <div class="mini-grid-tiny">${citizenGridHtml}</div>
+      </div>
 
-    <div class="stats-row">
-      <div class="stat-pill">🎴 山札 ${state.drawPile?.length ?? 0}</div>
-      <div class="stat-pill">💠 自分 ${myCost}</div>
-      <div class="stat-pill">💠 相手 ${oppCost}</div>
-      <div class="stat-pill">🆔 ${roomId}</div>
-    </div>
+      <!-- 中央ゾーン：バトルフィールド -->
+      <div class="zone zone-battle">
+        <div class="battle-row row-opponent">
+          ${fieldCardsHtml(opp)}
+          ${discardPileHtml(opp)}
+        </div>
 
-    ${seerLogHtml}
+        <div class="battle-divider">
+          <div class="divider-row">
+            ${turnChipHtml}
+            <div class="chip">🎴 ${state.drawPile?.length ?? 0}</div>
+            <div class="chip">💠 ${myCost} / ${oppCost}</div>
+            <button class="chip icon-btn" id="logToggleBtn">📜</button>
+            ${seerCount > 0 ? `<button class="chip icon-btn" id="seerToggleBtn">🔮 ${seerCount}</button>` : ""}
+            ${!isEnded ? `<button class="chip accuse-btn" id="accuseFab">⚔️ 告発</button>` : ""}
+          </div>
+          ${state.info?.[mySlot] ? `<div class="chip info-chip">🔎 ${state.info[mySlot]}</div>` : ""}
+          ${constraintText ? `<div class="chip constraint-chip">⚠️ ${constraintText}</div>` : ""}
+        </div>
 
-    <div class="flat-section panel">
-      <div class="flat-label">🃏 市民カード状況</div>
-      <div class="mini-grid">${citizenGridHtml}</div>
-    </div>
+        <div class="battle-row row-mine">
+          ${fieldCardsHtml(mySlot)}
+          ${discardPileHtml(mySlot)}
+        </div>
 
-    <div class="flat-section panel">
-      ${tableRow("A")}
-      ${tableRow("B")}
-      ${discardRow("A")}
-      ${discardRow("B")}
-    </div>
+        <div class="toast-layer" id="toastLayer"></div>
+      </div>
 
-    <div class="flat-section panel">
-      <div class="flat-label">✋ あなたの手札</div>
-      <div class="card-list">${handHtml}</div>
-      <div style="display:flex;gap:8px;margin-top:10px;">
-        ${
-          !isEnded && isMyTurn && state.phase === "needDraw"
-            ? `<button id="drawBtn">🎴 山札から引く</button>`
-            : ""
-        }
-        ${mulliganAvailable ? `<button class="warning-btn" id="mulliganBtn">🔄 引き直す</button>` : ""}
+      <!-- 下部ゾーン：自分の手札 -->
+      <div class="zone zone-hand">
+        ${resultStripHtml}
+        <div class="hand-fan">${handHtml}</div>
+        <div class="hand-actions">${handActionsHtml}</div>
       </div>
     </div>
-
-    ${endedHtml}
-
-    <div class="flat-section panel">
-      <div class="flat-label">📝 ログ</div>
-      <div class="log-box">${(state.log || []).map((l) => `<div>${l}</div>`).join("")}</div>
-    </div>
-
-    <button class="fab ${isEnded ? "" : "show"}" id="accuseFab">⚔️</button>
 
     <div class="sheet-overlay" id="sheetOverlay">
       <div class="sheet">
@@ -968,6 +992,7 @@ function renderPlaying(state) {
     ${modalOverlayHtml}
   `;
 
+  // --- イベントバインド ---
   const drawBtn = document.getElementById("drawBtn");
   if (drawBtn) drawBtn.onclick = () => Game.draw(roomId, mySlot).catch(showError);
 
@@ -988,7 +1013,7 @@ function renderPlaying(state) {
       if (!card) return;
       if (card.type === "citizen") {
         showModal(`
-          <div>${card.mark}${card.number}を出しますか？</div>
+          <div>このカードを出しますか？</div>
           <button onclick="window.__playCitizen('${cardId}')">はい</button>
           <button class="secondary" onclick="window.__closeModal()">キャンセル</button>
         `);
@@ -997,6 +1022,40 @@ function renderPlaying(state) {
       }
     };
   });
+
+  document.querySelectorAll(".discard-pile").forEach((btn) => {
+    btn.onclick = () => {
+      const slot = btn.dataset.discardSlot;
+      const cards = state.roleDiscard?.[slot] || [];
+      const html = cards.map((c) => cardVisualHtml(c, { extraClass: "battle-card" })).join("");
+      showModal(`
+        <div class="flat-label" style="margin-bottom:10px;">🎭 使用済み役職カード（${slot}）</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:14px;">${html}</div>
+        <button onclick="window.__closeModal()">閉じる</button>
+      `);
+    };
+  });
+
+  const seerBtn = document.getElementById("seerToggleBtn");
+  if (seerBtn)
+    seerBtn.onclick = () => {
+      const logs = state.seerRevealLog?.[mySlot] || [];
+      showModal(`
+        <div class="flat-label" style="margin-bottom:8px;">🔮 占い師の履歴（あなただけ）</div>
+        <div class="log-box" style="text-align:left;">${logs.map((t, i) => `<div>${i + 1}回目：${t}</div>`).join("")}</div>
+        <button onclick="window.__closeModal()" style="margin-top:12px;">閉じる</button>
+      `);
+    };
+
+  const logBtn = document.getElementById("logToggleBtn");
+  if (logBtn)
+    logBtn.onclick = () => {
+      showModal(`
+        <div class="flat-label" style="margin-bottom:8px;">📝 ゲームログ</div>
+        <div class="log-box" style="text-align:left;">${(state.log || []).map((l) => `<div>${l}</div>`).join("")}</div>
+        <button onclick="window.__closeModal()" style="margin-top:12px;">閉じる</button>
+      `);
+    };
 
   const accuseFab = document.getElementById("accuseFab");
   if (accuseFab) accuseFab.onclick = openSheet;
@@ -1020,6 +1079,8 @@ function renderPlaying(state) {
     rematchBtn.onclick = () => {
       lastSeenSeq = 0;
       endAnnounced = false;
+      const existingOverlay = document.getElementById("endOverlay");
+      if (existingOverlay) existingOverlay.remove();
       Game.reset(roomId).catch(showError);
     };
   const leaveBtn2 = document.getElementById("leaveBtn2");
@@ -1049,7 +1110,7 @@ function confirmPlayRole(card) {
     refresh();
     return;
   }
-  const label = card.type === "joker" ? "ジョーカー" : card.role + "(" + card.mark + ")";
+  const label = card.type === "joker" ? "ジョーカー" : "この役職カード";
   showModal(`
     <div>${label}を使用しますか？</div>
     <button onclick="window.__playRole('${card.id}', {})">使用する</button>
@@ -1057,32 +1118,16 @@ function confirmPlayRole(card) {
   `);
 }
 
+// --- ターン交代の演出通知（自動フェード、操作ブロックなし） ---
 function maybeAnnounceTurn(state) {
   if (state.status !== "playing") return;
   const la = state.lastAction;
   if (!la || la.seq === lastSeenSeq) return;
   lastSeenSeq = la.seq;
 
-  const message =
-    la.actorSlot === mySlot
-      ? `あなたが「${la.description}」を出しました。<br>ターンを終了します。`
-      : `相手が「${la.description}」を出してターン終了しました。<br>次はあなたのターンです。`;
-  showModal(`<div class="big-text">${message}</div><button onclick="window.__closeModal()">進む</button>`);
-}
-
-function maybeAnnounceEnd(state) {
-  if (state.status !== "ended" || endAnnounced) return;
-  endAnnounced = true;
-  const won = state.winner === mySlot;
-  const title = won
-    ? '<span class="result-safe">🎉 あなたの勝ちです！</span>'
-    : '<span class="result-out">残念、あなたの負けです</span>';
-  const detail = `勝因：${state.reason} ／ 人狼の正体：${state.wolf.mark}${state.wolf.number}`;
-  showModal(`
-    <div class="big-text">${title}</div>
-    <div style="color:#ccc;font-size:13px;margin-bottom:14px;">${detail}</div>
-    <button onclick="window.__closeModal()">結果画面を見る</button>
-  `);
+  const actorText = la.actorSlot === mySlot ? "あなたが" : "相手が";
+  const nextText = state.currentTurn === mySlot ? "🎯 あなたのターン" : "⌛ 相手のターン";
+  showToast(`${actorText}カードを出しました`, nextText);
 }
 
 window.__closeModal = closeModal;
