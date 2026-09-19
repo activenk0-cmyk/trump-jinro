@@ -113,6 +113,7 @@ function reduceStartGame(st) {
   const fp = Math.random() < 0.5 ? "A" : "B", sp = fp === "A" ? "B" : "A";
   st.status = "playing"; st.wolf = { mark: wolfMark, number: wolfNumber };
   st.hands = { A: handA, B: handB }; st.drawPile = deck; st.table = { A: [], B: [] }; st.discard = [];
+  st.costCards = { A: [], B: [] };
   st.info = { A: infoA, B: infoB }; st.seerHistory = { A: [], B: [] }; st.seerRevealLog = { A: [], B: [] }; st.roleDiscard = { A: [], B: [] };
   st.constraints = { A: null, B: null }; st.firstPlayer = fp; st.costPool = { A: 0, B: 0 }; st.turnSeq = 0; st.lastAction = null;
   st.playerMeta = { A: { virtualCostUnused: sp === "A", mulliganUsed: false, hasDrawnYet: false }, B: { virtualCostUnused: sp === "B", mulliganUsed: false, hasDrawnYet: false } };
@@ -160,6 +161,7 @@ function computeSeerResult(st, s) {
 }
 function reducePlayRole(st, s, cardId, opt = {}) {
   validateTurnAction(st, s, "needAction");
+  if (!st.costCards) st.costCards = { A: [], B: [] };
   const hand = st.hands[s]; const idx = hand.findIndex((c) => c.id === cardId);
   if (idx === -1) throw new GameActionError("指定されたカードが手札にありません。");
   const card = hand[idx]; if (card.type !== "role" && card.type !== "joker") throw new GameActionError("役職カードではありません。");
@@ -171,7 +173,7 @@ function reducePlayRole(st, s, cardId, opt = {}) {
       const hasC = countCitizens(hand) > 0;
       if (hasC) throw new GameActionError("前のターンの効果により、役職カードは出せません。市民カードを出してください。");
       if (!opt.forceFacedownByBlock) throw new GameActionError("騎士の効果：手札に市民カードが無いため、この役職カードは効果を発動できません。裏向きで場に出します。", { kForcedFacedownAvailable: true });
-      hand.splice(idx, 1); st.table[s].push({ type: "facedown" }); st.costPool[s] = (st.costPool[s] || 0) + 1;
+      hand.splice(idx, 1); st.costCards[s].push({ type: "facedown" }); st.costPool[s] = (st.costPool[s] || 0) + 1;
       setLastAction(st, s, "役職カード（裏向き・騎士効果）", null, true); addLog(st, `${s}は騎士の効果により、役職カードしか手札になく、裏向きで場に出しました。`);
       finishTurn(st, s); return st;
     }
@@ -182,7 +184,7 @@ function reducePlayRole(st, s, cardId, opt = {}) {
   if (!byPool && !withV) {
     const cih = countCitizens(hand), total = avail + (meta.virtualCostUnused ? 1 : 0), elig = cih === 0 && total === 0;
     if (opt.emergencySet && elig) {
-      hand.splice(idx, 1); st.table[s].push({ type: "facedown" }); st.costPool[s] = (st.costPool[s] || 0) + 1;
+      hand.splice(idx, 1); st.costCards[s].push({ type: "facedown" }); st.costPool[s] = (st.costPool[s] || 0) + 1;
       setLastAction(st, s, "役職カード（裏向き）", null, true); addLog(st, `${s}が緊急セットで役職カードを裏向きに出しました。`);
       finishTurn(st, s); return st;
     }
@@ -298,6 +300,14 @@ function renderFieldRow(cards, minSlots) {
   return items.join("");
 }
 function statusCellHtml(mk, n, played) { const cls = RED_MARKS.includes(mk) ? "mark-red" : "mark-black"; return `<div class="status-cell ${cls} ${played ? "played" : ""}">${mk}${n}</div>`; }
+
+// 裏向きセットカード（コスト用）のスタック表示
+function costStackHtml(cards) {
+  if (!cards || cards.length === 0) return "";
+  const shown = cards.slice(-3);
+  const inner = shown.map((_, i) => `<span class="cost-stack-card" style="--i:${i}"></span>`).join("");
+  return `<span class="cost-stack"><span class="cost-stack-cards">${inner}</span><span class="cost-stack-badge">×${cards.length}</span></span>`;
+}
 
 function showModal(h) { const o = document.getElementById("modalOverlay"); document.getElementById("modalContent").innerHTML = h; o.classList.add("show"); }
 function closeModal() { const o = document.getElementById("modalOverlay"); if (o) o.classList.remove("show"); }
@@ -447,16 +457,17 @@ function renderPlaying(st) {
 
   const handHtml = (st.hands?.[mySlot] || []).map((c) => handCardHtml(c, isMyTurn && st.phase === "needAction")).join("");
   const mulliganAvailable = !isEnded && st.firstPlayer === mySlot && !st.playerMeta[mySlot].mulliganUsed && !st.playerMeta[mySlot].hasDrawnYet && countCitizens(st.hands[mySlot]) === 0 && st.currentTurn === mySlot;
- const handActionsHtml = isEnded
+  const handActionsHtml = isEnded
     ? `<button class="success-btn" id="rematchBtn">🔁 もう一度対戦する</button><button class="danger" id="leaveBtn2">退室する</button>`
-    : mulliganAvailable
-      ? `<button class="warning-btn" id="mulliganBtn">🔄 役職カードのみのため強制引き直し</button>`
-      : `${isMyTurn && st.phase === "needDraw" ? `<button id="drawBtn">🎴 山札から引く</button>` : ""}`;
-  
+    : `${isMyTurn && st.phase === "needDraw" ? `<button id="drawBtn">🎴 山札から引く</button>` : ""}${mulliganAvailable ? `<button class="warning-btn" id="mulliganBtn">🔄 引き直す</button>` : ""}`;
+
   const wolfHint = st.info?.[mySlot] ? `🔎 ${st.info[mySlot]}` : "";
   const constraintLine = cText ? `<span class="constraint-txt">⚠️ ${cText}</span>` : "";
   const wolfHintRowHtml = !isEnded && (wolfHint || constraintLine) ? `<div class="wolf-hint-row">${wolfHint}${constraintLine}</div>` : "";
   const seerRowHtml = `<div class="center-seer-row"><span class="seer-label">占い師で把握した${seerLabel}：</span>${seerValues.length > 0 ? seerValues.map((v) => `<span class="seer-item">${v}</span>`).join("") : `<span style="opacity:0.6;">まだありません</span>`}</div>`;
+
+  const myCostStack = costStackHtml(st.costCards?.[mySlot]);
+  const oppCostStack = costStackHtml(st.costCards?.[opp]);
 
   app.innerHTML = `
     <div class="board-screen">
@@ -478,7 +489,10 @@ function renderPlaying(st) {
           <div class="side-icon-col"><button class="center-log-btn" id="logToggleBtn">📜</button></div>
           <div class="center-stack">
             <div class="center-action-row">${turnChipHtml}${!isEnded ? `<button class="accuse-btn" id="accuseFab">告発</button>` : ""}</div>
-            <div class="cost-line"><span class="cost-mine">あなたのコスト：${myCost}</span><span class="cost-opp">相手のコスト：${oppCost}</span></div>
+            <div class="cost-line">
+              <span class="cost-block cost-block-mine"><span class="cost-mine">あなたのコスト：${myCost}</span>${myCostStack}</span>
+              <span class="cost-block cost-block-opp">${oppCostStack}<span class="cost-opp">相手のコスト：${oppCost}</span></span>
+            </div>
           </div>
           <div class="side-icon-col"><div class="deck-pile"><span class="deck-pile-label">山札</span><span class="deck-pile-count">${st.drawPile?.length ?? 0}枚</span></div></div>
         </div>
