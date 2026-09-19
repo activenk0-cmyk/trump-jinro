@@ -71,8 +71,6 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
 .lobby-btn.btn-create { background: linear-gradient(160deg, #a3233f, #5e0f22); box-shadow: 0 6px 0 rgba(0,0,0,0.4), 0 8px 20px rgba(120,20,40,0.5); }
 .lobby-btn.btn-join { background: linear-gradient(160deg, #1f5fa8, #123a63); box-shadow: 0 6px 0 rgba(0,0,0,0.4), 0 8px 20px rgba(20,70,150,0.5); }
 .lobby-btn:hover { transform: translateY(-4px); filter: brightness(1.12); }
-.lobby-btn.btn-create:hover { box-shadow: 0 10px 0 rgba(0,0,0,0.4), 0 0 32px rgba(220,60,90,0.7), 0 0 18px rgba(255,180,120,0.5); }
-.lobby-btn.btn-join:hover { box-shadow: 0 10px 0 rgba(0,0,0,0.4), 0 0 32px rgba(60,150,240,0.7), 0 0 18px rgba(160,210,255,0.5); }
 .lobby-btn:active { transform: translateY(2px); }
 .lobby-btn:disabled { opacity: 0.4; filter: grayscale(40%); cursor: not-allowed; }
 .join-form { width: 100%; max-width: 320px; margin-top: 20px; text-align: left; background: linear-gradient(160deg, rgba(40,28,70,0.7), rgba(15,12,30,0.8)); padding: 18px; border-radius: 14px; border: 1px solid rgba(255,215,0,0.28); box-shadow: 0 8px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06); }
@@ -133,16 +131,23 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
 .card:disabled { cursor: not-allowed; }
 .card.field-card:disabled { opacity: 1; filter: none; }
 
-/* ===================== 対戦盤面 ===================== */
-.board-screen { height: 100dvh; max-height: 100dvh; display: flex; flex-direction: column; overflow: hidden; padding: calc(6px + env(safe-area-inset-top)) 8px calc(8px + env(safe-area-inset-bottom)); gap: 3px; position: relative; }
+/* ===================== 対戦盤面（全ゾーン固定高さ） ===================== */
+.board-screen {
+  height: 100dvh; max-height: 100dvh;
+  display: flex; flex-direction: column; overflow: hidden;
+  padding: calc(6px + env(safe-area-inset-top)) 8px calc(8px + env(safe-area-inset-bottom));
+  gap: 4px; position: relative;
+}
 
-/* --- ヘッダー --- */
+/* --- ヘッダー（相手手札＋相手マナ ← → 退室＋4x4グリッド）--- */
 .zone-header { flex: 0 0 auto; display: flex; justify-content: space-between; align-items: flex-start; }
-.opp-hand-block { display: flex; flex-direction: column; gap: 3px; }
+.header-left { display: flex; flex-direction: column; gap: 2px; }
 .opp-hand-mini { display: flex; align-items: center; gap: 6px; }
 .mini-back { width: 26px; }
 .opp-hand-count { font-size: 12px; font-weight: 800; color: #d8c4ff; text-shadow: 0 1px 2px rgba(0,0,0,.7); }
 .opp-cost-line { font-size: 11px; font-weight: 800; color: #ffe066; text-shadow: 0 1px 2px rgba(0,0,0,.7); }
+/* 相手マナ：ヘッダー内にインライン配置（縦幅を追加しない） */
+.mana-inline { display: flex; align-items: center; gap: 4px; margin-top: 1px; }
 .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .leave-btn-mini { font-size: 10px; padding: 4px 10px; border-radius: 8px; background: linear-gradient(160deg, #6d2036, #3c1120); border: 1px solid #c8a24a; color: #f6e4c8; }
 .citizen-mini-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; width: 96px; }
@@ -151,39 +156,44 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
 .status-cell.mark-red { color: #e79aa4; }
 .status-cell.played { opacity: 0.28; background: rgba(0,0,0,0.5); filter: grayscale(80%); }
 
-/* --- マナゾーン（裏向きコストカード置き場） --- */
-.zone-opp-mana, .zone-my-mana { flex: 0 0 auto; display: flex; align-items: center; gap: 6px; padding: 2px 8px; }
-.mana-label { font-size: 10px; font-weight: 800; color: #9a74ff; letter-spacing: 0.06em; white-space: nowrap; text-shadow: 0 1px 2px rgba(0,0,0,.7); }
-.mana-row { display: flex; gap: 4px; }
+/* --- マナゾーン共通 --- */
+.mana-label { font-size: 9px; font-weight: 900; color: #9a74ff; letter-spacing: 0.08em; white-space: nowrap; text-shadow: 0 1px 2px rgba(0,0,0,.7); }
+.mana-row { display: flex; gap: 3px; }
 .mana-slot {
-  width: 34px; aspect-ratio: 10 / 9; border-radius: 6px;
+  width: 28px; aspect-ratio: 10 / 9; border-radius: 5px;
   border: 1.5px dashed rgba(154,116,255,0.25);
   background: rgba(154,116,255,0.04);
   position: relative; flex-shrink: 0;
 }
 .mana-slot.filled { border-style: solid; border-color: rgba(154,116,255,0.45); background: rgba(154,116,255,0.08); }
 .mana-card-back {
-  position: absolute; inset: 2px; border-radius: 4px;
-  background: repeating-linear-gradient(45deg, #1b1440 0 5px, #2a1f60 5px 10px);
+  position: absolute; inset: 2px; border-radius: 3px;
+  background: repeating-linear-gradient(45deg, #1b1440 0 4px, #2a1f60 4px 8px);
   border: 1px solid #6a5a9f;
-  box-shadow: inset 0 0 6px rgba(120,80,220,0.25);
+  box-shadow: inset 0 0 4px rgba(120,80,220,0.25);
 }
 .mana-card-back::after {
   content: ""; position: absolute; top: 22%; left: 22%; width: 56%; height: 56%;
-  border-radius: 50%; border: 1.5px solid rgba(255,215,0,0.4);
-  box-shadow: 0 0 6px rgba(255,215,0,0.3);
+  border-radius: 50%; border: 1px solid rgba(255,215,0,0.35);
+  box-shadow: 0 0 4px rgba(255,215,0,0.25);
 }
 
-/* --- フィールド --- */
-.zone-opp-field { flex: 0 0 auto; display: flex; flex-direction: column; gap: 3px; }
-.zone-my-field { flex: 0 0 auto; display: flex; flex-direction: column; gap: 3px; }
+/* 自分マナゾーン（役職置き場と手札の間） */
+.zone-my-mana { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 2px 0; }
+
+/* --- 相手フィールド --- */
+.zone-opp-field { flex: 0 0 auto; display: flex; flex-direction: column; gap: 3px; margin-top: 6px; }
+
+/* --- 自分フィールド --- */
+.zone-my-field { flex: 0 0 auto; display: flex; flex-direction: column; gap: 3px; margin-top: 6px; }
+
 .slot-row { display: flex; gap: 5px; align-items: center; justify-content: center; }
 .slot-row .card.field-card, .slot-row .field-slot.empty { width: 54px; }
 .field-slot.empty { aspect-ratio: 10 / 9; border-radius: 8px; border: 1.5px dashed rgba(255,255,255,0.13); background: rgba(255,255,255,0.02); flex-shrink: 0; }
 .card.field-card { background-size: 1132% 943%; }
 
-/* --- 中央ゾーン --- */
-.zone-center { flex: 1 1 0; display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 2px 0; min-height: 0; }
+/* --- 中央ゾーン（固定高さ、flex-growなし） --- */
+.zone-center { flex: 0 0 auto; display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 6px 0; }
 .center-top-grid { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 6px; }
 .side-icon-col { display: flex; align-items: center; justify-content: center; }
 .center-log-btn { width: 40px; height: 40px; border-radius: 10px; font-size: 10px; font-weight: 900; display: flex; align-items: center; justify-content: center; background: linear-gradient(160deg, #3a3768, #211d3e); border: 1px solid rgba(255,255,255,0.14); letter-spacing: 0.04em; color: #cabdf0; }
@@ -217,12 +227,12 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
 .toast-title { font-size: 14px; font-weight: 800; color: #fff3c4; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
 .toast-sub { font-size: 12px; color: #cabdf0; margin-top: 4px; }
 
-/* --- 手札ゾーン（+20% 拡大） --- */
+/* --- 手札ゾーン（+20%拡大） --- */
 .zone-hand { flex: 0 0 auto; display: flex; flex-direction: column; margin-top: 4px; }
 .hand-actions-row { display: flex; gap: 8px; justify-content: center; margin-bottom: 4px; }
 .hand-actions-row button { flex: 0 1 170px; }
 .hand-fan-row { display: flex; justify-content: center; align-items: flex-end; overflow-x: auto; overflow-y: visible; padding: 10px 12px 4px; }
-/* +20% : 旧 clamp(66px, 21vw, 92px) → clamp(80px, 25vw, 110px) */
+/* +20% : 旧 clamp(66px,21vw,92px) → clamp(80px,25vw,110px) */
 .card.hand-card { width: clamp(80px, 25vw, 110px); margin-left: -16px; }
 .card.hand-card:first-child { margin-left: 0; }
 .card.hand-card { opacity: 1 !important; filter: none !important; }
