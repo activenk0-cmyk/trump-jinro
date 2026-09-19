@@ -123,8 +123,9 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
   cursor: default; flex-shrink: 0;
 }
 .card::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,0.16), transparent 45%); pointer-events: none; }
-.card.suit-black { border-color: #b6bccf; }
-.card.suit-red   { border-color: #cf9a86; }
+/* 市民カード（役職フレームなし）はすべてシルバーの縁 */
+.card:not(.role-frame) { border-color: #b6bccf; }
+/* 役職カード（J・Q・K・A）はゴールドの縁 */
 .card.role-frame { border-color: #ffd700; box-shadow: 0 2px 8px rgba(0,0,0,.6), 0 0 12px rgba(255,215,0,.35), inset 0 0 0 1px rgba(255,255,255,.14); }
 @keyframes holoSpin { to { transform: rotate(360deg); } }
 .card.joker-frame { border: 2px solid #ffd700; }
