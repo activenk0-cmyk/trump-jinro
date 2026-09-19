@@ -459,7 +459,6 @@ function renderPlaying(st) {
       <div class="zone-header">
         <div class="header-left">
           <div class="opp-hand-mini"><div class="card card-back mini-back"></div><span class="opp-hand-count">×${oppHandCount}</span></div>
-          <div class="opp-cost-line">コスト：${oppCost}</div>
         </div>
         <div class="header-right">
           <button class="leave-btn-mini" id="leaveHeaderBtn">退室</button>
