@@ -164,7 +164,7 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
 /* ★場のカードは左上70%だけをアップ表示。
    通常600%×500%を 1/0.7≒1.4286倍した 857% 714% に拡大し、左上寄せで覗く。
    位置はJS側で「左上基準」に換算した値を渡す。 */
-.card.field-card { background-size: 2000% 1667%; }
+.card.field-card { background-size: 1333% 1111%; }
 
 .zone-center { flex: 0 0 auto; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 4px 0; }
 .center-top-grid { display: grid; grid-template-columns: 48px 1fr 48px; align-items: center; gap: 8px; }
