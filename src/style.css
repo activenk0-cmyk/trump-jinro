@@ -182,6 +182,40 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
 .toast-title { font-size: 14px; font-weight: 800; color: #fff3c4; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
 .toast-sub { font-size: 12px; color: #cabdf0; margin-top: 4px; }
 
+/* ===================== MANA バー（マナクリスタル風） ===================== */
+.zone-mana-bar {
+  flex: 0 0 auto;
+  margin: 2px auto 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 6px;
+}
+.mana-label {
+  font-family: "Cinzel", serif;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  color: #b8a2ff;
+  text-shadow: 0 0 8px rgba(154,116,255,0.6), 0 1px 2px rgba(0,0,0,0.85);
+}
+.mana-row { display: flex; gap: 5px; }
+.mana-slot {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 1px solid rgba(154,116,255,0.35);
+  background: radial-gradient(circle at 30% 30%, rgba(50,30,90,0.55), rgba(10,6,22,0.85));
+  box-shadow: inset 0 0 5px rgba(0,0,0,0.75);
+}
+.mana-slot.filled {
+  border-color: #d8caff;
+  background: radial-gradient(circle at 32% 28%, #ffffff 0%, #d9c8ff 18%, #7a5fff 55%, #2f1f70 100%);
+  box-shadow:
+    0 0 10px rgba(154,116,255,0.75),
+    inset 0 -2px 4px rgba(0,0,0,0.4),
+    inset 0 2px 3px rgba(255,255,255,0.5);
+}
+.mana-card-back { display: none; }
+
 .zone-hand { flex: 0 0 auto; display: flex; flex-direction: column; margin-top: 6px; }
 .hand-actions-row { display: flex; gap: 8px; justify-content: center; margin-bottom: 6px; }
 .hand-actions-row button { flex: 0 1 170px; }
