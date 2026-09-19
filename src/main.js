@@ -19,7 +19,7 @@ const SPRITE_ROWS = 5;
 
 // 横：均等（0,20,40,60,80,100%）
 // 縦：均等割だと中央行が下にズレる報告のため各行を個別補正。値を小さくすると上へ。
-const SPRITE_ROW_Y = [-1.5, 26.3, 53, 76.3, 100]; // %
+const SPRITE_ROW_Y = [-2, 26.6, 53, 76.6, 100]; // %
 
 function getSpriteIndex(card) {
   if (card.type === "joker") return 28 + (Number(card.id) % 2 === 0 ? 0 : 1);
@@ -45,7 +45,7 @@ function spritePosition(index) {
 function spritePositionField(index) {
   const col = index % SPRITE_COLS;
   const row = Math.floor(index / SPRITE_COLS);
-  const k = 1 / 0.64; // ≒1.4286
+  const k = 1 / 0.3; // ≒1.4286
   // 拡大後の背景幅 = 元幅 * k。1セルの左端割合(元) = col/(cols) 。
   // background-position% = セル左端割合 / (1 - 表示幅割合) 。表示幅割合 = 1/(cols*k)
   const cellLeftFracX = col / SPRITE_COLS;             // 元シートでのセル左端(0〜1)
