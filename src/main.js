@@ -3,7 +3,7 @@ import { db } from "./firebase.js";
 import { doc, getDoc, runTransaction, onSnapshot } from "firebase/firestore";
 
 // ============================================================
-// スプライト（1152x864 / 6列5行）
+// スプライト（6列5行）
 // ============================================================
 const MARKS = ["♠", "♥", "♣", "♦"];
 const NUMBERS = [1, 2, 3, 4];
@@ -17,10 +17,9 @@ const SPRITE_RANK_ORDER = ["1", "2", "3", "4", "J", "Q", "K"];
 const SPRITE_COLS = 6;
 const SPRITE_ROWS = 5;
 
-// 横は均等（0/20/40/60/80/100%）
-// 縦は均等割だと中央行ほど下にズレる報告のため、各行を個別補正。
-// 値を小さくするとそのカードが上に動く。報告（2・4行やや下、3行大きく下）を打ち消す値。
-const SPRITE_ROW_Y = ["0%", "23%", "47%", "73%", "100%"];
+// 横：均等（0,20,40,60,80,100%）
+// 縦：均等割だと中央行が下にズレる報告のため各行を個別補正。値を小さくすると上へ。
+const SPRITE_ROW_Y = [0, 23, 47, 73, 100]; // %
 
 function getSpriteIndex(card) {
   if (card.type === "joker") return 28 + (Number(card.id) % 2 === 0 ? 0 : 1);
@@ -30,26 +29,33 @@ function getSpriteIndex(card) {
   if (suitIdx === -1 || rankIdx === -1) return null;
   return suitIdx * 7 + rankIdx;
 }
-function spritePosXY(index) {
+
+// 通常表示（background-size: 600% 500% に対するパーセント位置）
+function spritePosition(index) {
   const col = index % SPRITE_COLS;
   const row = Math.floor(index / SPRITE_COLS);
   const x = (col / (SPRITE_COLS - 1)) * 100;
-  const y = SPRITE_ROW_Y[row] || "0%";
-  return { x: `${x}%`, y };
+  const y = SPRITE_ROW_Y[row] ?? 0;
+  return `${x}% ${y}%`;
 }
-// 通常表示（全体）
-function spritePosition(index) { const p = spritePosXY(index); return `${p.x} ${p.y}`; }
-// 場用：左上70%だけをアップ（background-sizeを1/0.7=約143%倍にCSS側で拡大済み）。
-// 拡大時も左上基準を保つため position は 0% 0% 起点＋列/行オフセットを縮尺換算。
-// background-size: 857% 714%（＝600/0.7, 500/0.7）に対応する位置指定。
+
+// 場用（左上70%クロップ = background-size: 857% 714% に対するパーセント位置）
+// 拡大率 k = 1/0.7。X方向のセル数は実質 6/k、位置百分率は col/(6/k - 1) 相当だが、
+// 「左上を左上に合わせる」ため、拡大後の座標系での各セル左端割合を算出する。
 function spritePositionField(index) {
   const col = index % SPRITE_COLS;
   const row = Math.floor(index / SPRITE_COLS);
-  // 拡大率 k=1/0.7。各カードの左上を左上に合わせるための百分率。
-  // X: col*(100/(cols*k-1))相当 → 実測的に均等でOK
-  const xPct = (col / (SPRITE_COLS - 1)) * 100;
-  const yBase = parseFloat(SPRITE_ROW_Y[row]);
-  return `${xPct}% ${yBase}%`;
+  const k = 1 / 0.7; // ≒1.4286
+  // 拡大後の背景幅 = 元幅 * k。1セルの左端割合(元) = col/(cols) 。
+  // background-position% = セル左端割合 / (1 - 表示幅割合) 。表示幅割合 = 1/(cols*k)
+  const cellLeftFracX = col / SPRITE_COLS;             // 元シートでのセル左端(0〜1)
+  const viewFracX = 1 / (SPRITE_COLS * k);             // 表示窓の幅割合
+  const posX = (cellLeftFracX / (1 - viewFracX)) * 100;
+  // Y方向は行補正値を使い、同様に左上寄せ
+  const cellTopFracY = (SPRITE_ROW_Y[row] ?? 0) / 100 * ((SPRITE_ROWS - 1) / SPRITE_ROWS); // 補正込みの上端割合近似
+  const viewFracY = 1 / (SPRITE_ROWS * k);
+  const posY = (cellTopFracY / (1 - viewFracY)) * 100;
+  return `${posX}% ${posY}%`;
 }
 
 class GameActionError extends Error { constructor(m, p) { super(m); this.payload = p || {}; } }
@@ -166,7 +172,7 @@ function reducePlayRole(st, s, cardId, opt = {}) {
       if (hasC) throw new GameActionError("前のターンの効果により、役職カードは出せません。市民カードを出してください。");
       if (!opt.forceFacedownByBlock) throw new GameActionError("騎士の効果：手札に市民カードが無いため、この役職カードは効果を発動できません。裏向きで場に出します。", { kForcedFacedownAvailable: true });
       hand.splice(idx, 1); st.table[s].push({ type: "facedown" }); st.costPool[s] = (st.costPool[s] || 0) + 1;
-      setLastAction(st, s, "役職カード（裏向き・騎士効果）", "r_facedown_" + st.turnSeq, true); addLog(st, `${s}は騎士の効果により、役職カードしか手札になく、裏向きで場に出しました。`);
+      setLastAction(st, s, "役職カード（裏向き・騎士効果）", null, true); addLog(st, `${s}は騎士の効果により、役職カードしか手札になく、裏向きで場に出しました。`);
       finishTurn(st, s); return st;
     }
   }
@@ -177,7 +183,7 @@ function reducePlayRole(st, s, cardId, opt = {}) {
     const cih = countCitizens(hand), total = avail + (meta.virtualCostUnused ? 1 : 0), elig = cih === 0 && total === 0;
     if (opt.emergencySet && elig) {
       hand.splice(idx, 1); st.table[s].push({ type: "facedown" }); st.costPool[s] = (st.costPool[s] || 0) + 1;
-      setLastAction(st, s, "役職カード（裏向き）", "r_facedown_" + st.turnSeq, true); addLog(st, `${s}が緊急セットで役職カードを裏向きに出しました。`);
+      setLastAction(st, s, "役職カード（裏向き）", null, true); addLog(st, `${s}が緊急セットで役職カードを裏向きに出しました。`);
       finishTurn(st, s); return st;
     }
     throw new GameActionError("コストが足りません。", { emergencyAvailable: elig });
@@ -192,8 +198,7 @@ function reducePlayRole(st, s, cardId, opt = {}) {
   else if (card.type === "role" && card.role === "Q") { st.constraints[opponent(s)] = { type: "forceAttribute", attr: opt.attr, value: opt.value }; addLog(st, `${s}が怪盗を使用し、相手に「${opt.value}」を強制しました。`); desc = "怪盗(Q)"; }
   else if (card.type === "role" && card.role === "K") { st.constraints[opponent(s)] = { type: "blockRoles" }; addLog(st, `${s}が騎士を使用しました。相手は次のターン役職カードを出せません。`); desc = "騎士(K)"; }
   else if (card.type === "joker") { st.constraints[opponent(s)] = { type: "forceAccuse" }; addLog(st, `${s}がジョーカーを使用しました。相手は次のターン告発を強制されます。`); desc = "ジョーカー"; }
-  // 役職カードは捨て札に行くため場には残らないが、召喚演出のため使用済み役職列の末尾を対象にする
-  setLastAction(st, s, desc, "role_last_" + s, true);
+  setLastAction(st, s, desc, null, true);
   finishTurn(st, s);
   return st;
 }
@@ -262,21 +267,26 @@ function clearSession() { localStorage.removeItem(SESSION_KEY); }
 const app = document.getElementById("app");
 let roomId = null, mySlot = null, unsubscribe = null, lastSeenSeq = 0, endAnnounced = false;
 
+// 手札は常に通常表示（透過/グレースケール/発光アニメを付けない）
 function cardVisualHtml(card, opts = {}) {
   const { interactive = false, disabled = true, dataCardId = null, extraClass = "", field = false } = opts;
   const da = disabled ? "disabled" : "";
   const dc = dataCardId ? `data-card-id="${dataCardId}"` : "";
   const ic = interactive ? "interactive" : "";
-  if (card.type === "facedown") return `<button ${da} ${dc} class="card card-back ${extraClass}"><span class="card-back-emblem"></span></button>`;
+  if (card.type === "facedown") return `<button ${da} ${dc} class="card card-back ${extraClass}"></button>`;
   const idx = getSpriteIndex(card);
   const pos = idx !== null ? (field ? spritePositionField(idx) : spritePosition(idx)) : "0% 0%";
   const frame = card.type === "citizen" ? (RED_MARKS.includes(card.mark) ? "suit-red" : "suit-black") : card.type === "role" ? "role-frame" : "joker-frame";
   return `<button ${da} ${dc} class="card ${frame} ${ic} ${extraClass}" style="background-image:url('/cards.png'); background-position:${pos};"></button>`;
 }
 function handCardHtml(card, canAct) {
-  const k = card.type === "citizen" ? "citizen-hand" : "role-hand";
-  // 手札は常に同じ見た目（未ドロー時も透けない）。操作可否はinteractive/disabledで制御。
-  return cardVisualHtml(card, { interactive: canAct, disabled: !canAct, dataCardId: card.id, extraClass: "hand-card " + k });
+  const k = card.type === "citizen" ? "suit-" + (RED_MARKS.includes(card.mark) ? "red" : "black") : card.type === "role" ? "role-frame" : "joker-frame";
+  const idx = getSpriteIndex(card);
+  const pos = idx !== null ? spritePosition(idx) : "0% 0%";
+  const ic = canAct ? "interactive" : "";
+  const da = canAct ? "" : "disabled";
+  // 手札は常に通常見た目。押せるかどうかだけ interactive/disabled で制御。
+  return `<button ${da} data-card-id="${card.id}" class="card hand-card ${k} ${ic}" style="background-image:url('/cards.png'); background-position:${pos};"></button>`;
 }
 function renderFieldRow(cards, minSlots) {
   const items = cards.map((c) => {
@@ -313,19 +323,18 @@ function showEndOverlay(st) {
   document.getElementById("endOverlayCloseBtn").onclick = () => { el.classList.remove("show"); setTimeout(() => el.remove(), 350); };
 }
 
-// ===== 召喚演出 =====
-function playSummonEffect(targetBtn) {
-  if (!targetBtn) return;
-  targetBtn.classList.add("summon-anim");
-  targetBtn.addEventListener("animationend", () => {
-    targetBtn.classList.remove("summon-anim");
+function playSummonEffect(btn) {
+  if (!btn) return;
+  btn.classList.add("summon-anim");
+  btn.addEventListener("animationend", () => {
+    btn.classList.remove("summon-anim");
     const board = document.querySelector(".board-screen");
     if (board) { board.classList.add("shake"); setTimeout(() => board.classList.remove("shake"), 160); }
-    spawnSparks(targetBtn);
+    spawnSparks(btn);
   }, { once: true });
 }
-function spawnSparks(targetBtn) {
-  const rect = targetBtn.getBoundingClientRect();
+function spawnSparks(btn) {
+  const rect = btn.getBoundingClientRect();
   const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
   const layer = document.createElement("div"); layer.className = "spark-layer"; document.body.appendChild(layer);
   for (let i = 0; i < 60; i++) {
@@ -339,26 +348,20 @@ function spawnSparks(targetBtn) {
   setTimeout(() => layer.remove(), 1100);
 }
 
-// --- トップ画面（絵文字廃止・重厚ロゴ＆金枠ボタン） ---
 function renderLandingScreen() {
   app.innerHTML = `
     <div class="landing-screen">
-      <div class="landing-emblem-wrap">
-        <h1 class="landing-title">トランプ人狼</h1>
-        <div class="landing-title-underline"></div>
-      </div>
+      <div class="landing-emblem-wrap"><h1 class="landing-title">トランプ人狼</h1><div class="landing-title-underline"></div></div>
       <div class="landing-sub">DUAL BLIND DUEL</div>
       <div class="landing-buttons">
         <button class="lobby-btn btn-create" id="createRoomBtn">部屋を作る</button>
         <button class="lobby-btn btn-join" id="showJoinFormBtn">部屋に入る</button>
       </div>
       <div class="join-form" id="joinForm" style="display:none;">
-        <label>ルームID</label>
-        <input type="text" id="joinIdInput" placeholder="例：AB3XQ9" maxlength="6" />
+        <label>ルームID</label><input type="text" id="joinIdInput" placeholder="例：AB3XQ9" maxlength="6" />
         <button class="lobby-btn btn-join" id="submitJoinBtn">入室する</button>
       </div>
-    </div>
-    ${modalOverlayHtml}`;
+    </div>${modalOverlayHtml}`;
   document.getElementById("createRoomBtn").onclick = handleCreateRoom;
   document.getElementById("showJoinFormBtn").onclick = () => { document.getElementById("joinForm").style.display = "block"; document.getElementById("joinIdInput").focus(); };
   document.getElementById("submitJoinBtn").onclick = handleJoinRoomSubmit;
@@ -481,14 +484,11 @@ function renderPlaying(st) {
         ${seerRowHtml}
       </div>
 
-      <div class="flex-buffer"></div>
-
       <div class="zone-my-field">
         <div class="slot-row">${myCitizenRow}</div>
         <div class="slot-row">${myRoleRow}</div>
       </div>
 
-      <!-- ★手札を自分の役職置き場の直下に -->
       <div class="zone-hand">
         <div class="hand-actions-row">${handActionsHtml}</div>
         <div class="hand-fan-row">${handHtml}</div>
@@ -546,12 +546,9 @@ function maybeAnnounceTurn(st) {
   const la = st.lastAction;
   if (!la || la.seq === lastSeenSeq) return;
   lastSeenSeq = la.seq;
-  // 召喚演出：市民カードは場のそのカード、役職カードは対応する使用済み役職列の末尾
   requestAnimationFrame(() => {
     let btn = null;
     if (la.isRole) {
-      const list = document.querySelectorAll(`.zone-opp-field .slot-row:first-child .field-card, .zone-my-field .slot-row:last-child .field-card`);
-      // 直前の行動プレイヤーの役職列の最後のカードを対象にする
       const rowSel = la.actorSlot === mySlot ? ".zone-my-field .slot-row:last-child" : ".zone-opp-field .slot-row:first-child";
       const cards = document.querySelectorAll(`${rowSel} .field-card`);
       if (cards.length) btn = cards[cards.length - 1];
