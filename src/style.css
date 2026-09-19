@@ -17,8 +17,9 @@ body::before {
 body::after {
   content: ""; position: fixed; inset: 0; z-index: -2;
   background:
-    linear-gradient(160deg, rgba(20,8,30,0.62), rgba(8,6,20,0.78)),
-    radial-gradient(ellipse at center, rgba(0,0,0,0.2) 38%, rgba(0,0,0,0.72) 100%);
+    linear-gradient(160deg, rgba(20,8,30,0.35), rgba(8,6,20,0.52)),
+    radial-gradient(ellipse at center, rgba(0,0,0,0.05) 38%, rgba(0,0,0,0.45) 100%);
+  pointer-events: none;
 }
 h1, h2, h3 { font-family: "Cinzel", "Noto Sans JP", serif; }
 
