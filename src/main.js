@@ -2,9 +2,6 @@ import "./style.css";
 import { db } from "./firebase.js";
 import { doc, getDoc, runTransaction, onSnapshot } from "firebase/firestore";
 
-// ============================================================
-// スプライト（6列5行）
-// ============================================================
 const MARKS = ["♠", "♥", "♣", "♦"];
 const NUMBERS = [1, 2, 3, 4];
 const RED_MARKS = ["♥", "♦"];
@@ -26,7 +23,6 @@ function getSpriteIndex(card) {
   if (suitIdx === -1 || rankIdx === -1) return null;
   return suitIdx * 7 + rankIdx;
 }
-
 function spritePosition(index) {
   const col = index % SPRITE_COLS;
   const row = Math.floor(index / SPRITE_COLS);
@@ -34,7 +30,6 @@ function spritePosition(index) {
   const y = SPRITE_ROW_Y[row] ?? 0;
   return `${x}% ${y}%`;
 }
-
 function spritePositionField(index) {
   const col = index % SPRITE_COLS;
   const row = Math.floor(index / SPRITE_COLS);
@@ -288,8 +283,8 @@ function renderFieldRow(cards, minSlots) {
   return items.join("");
 }
 function renderManaRow(costCards, max) {
-  const items = [];
   const arr = costCards || [];
+  const items = [];
   for (let i = 0; i < max; i++) {
     if (i < arr.length) items.push(`<div class="mana-slot filled"><div class="mana-card-back"></div></div>`);
     else items.push(`<div class="mana-slot"></div>`);
@@ -418,19 +413,16 @@ function renderPlaying(st) {
   const opp = opponent(mySlot);
   const isMyTurn = !isEnded && st.currentTurn === mySlot;
 
-  // 市民チェック表
   const playedSet = new Set();
   ["A", "B"].forEach((s) => (st.table[s] || []).forEach((c) => { if (c.type === "citizen") playedSet.add(c.mark + c.number); }));
   const citizenGridHtml = MARKS.map((mk) => NUMBERS.map((n) => statusCellHtml(mk, n, playedSet.has(mk + n))).join("")).join("");
   const oppHandCount = st.hands?.[opp]?.length ?? 0;
 
-  // フィールド描画（市民カードのみフィルタ）
   const oppRoleRow = renderFieldRow(st.roleDiscard?.[opp] || [], 6);
   const oppCitizenRow = renderFieldRow((st.table[opp] || []).filter((c) => c.type === "citizen"), 6);
   const myCitizenRow = renderFieldRow((st.table[mySlot] || []).filter((c) => c.type === "citizen"), 6);
   const myRoleRow = renderFieldRow(st.roleDiscard?.[mySlot] || [], 6);
 
-  // マナゾーン描画
   const oppManaRow = renderManaRow(st.costCards?.[opp], 4);
   const myManaRow = renderManaRow(st.costCards?.[mySlot], 4);
 
@@ -456,7 +448,7 @@ function renderPlaying(st) {
     ? `<button class="success-btn" id="rematchBtn">もう一度対戦する</button><button class="danger" id="leaveBtn2">退室する</button>`
     : `${isMyTurn && st.phase === "needDraw" ? `<button id="drawBtn">山札から引く</button>` : ""}${mulliganAvailable ? `<button class="warning-btn" id="mulliganBtn">引き直す</button>` : ""}`;
 
-  const wolfHint = st.info?.[mySlot] ? st.info[mySlot] : "";
+  const wolfHint = st.info?.[mySlot] || "";
   const constraintLine = cText ? `<span class="constraint-txt">${cText}</span>` : "";
   const wolfHintRowHtml = !isEnded && (wolfHint || constraintLine) ? `<div class="wolf-hint-row">${wolfHint}${constraintLine}</div>` : "";
   const seerRowHtml = `<div class="center-seer-row"><span class="seer-label">占い師で把握した${seerLabel}：</span>${seerValues.length > 0 ? seerValues.map((v) => `<span class="seer-item">${v}</span>`).join("") : `<span style="opacity:0.6;">まだありません</span>`}</div>`;
@@ -465,16 +457,15 @@ function renderPlaying(st) {
     <div class="board-screen">
 
       <div class="zone-header">
-        <div class="opp-hand-block">
+        <div class="header-left">
           <div class="opp-hand-mini"><div class="card card-back mini-back"></div><span class="opp-hand-count">×${oppHandCount}</span></div>
           <div class="opp-cost-line">コスト：${oppCost}</div>
+          <div class="mana-inline"><div class="mana-label">MANA</div><div class="mana-row">${oppManaRow}</div></div>
         </div>
-        <div class="header-right"><button class="leave-btn-mini" id="leaveHeaderBtn">退室</button><div class="citizen-mini-grid">${citizenGridHtml}</div></div>
-      </div>
-
-      <div class="zone-opp-mana">
-        <div class="mana-label">相手マナ</div>
-        <div class="mana-row">${oppManaRow}</div>
+        <div class="header-right">
+          <button class="leave-btn-mini" id="leaveHeaderBtn">退室</button>
+          <div class="citizen-mini-grid">${citizenGridHtml}</div>
+        </div>
       </div>
 
       <div class="zone-opp-field">
@@ -501,7 +492,7 @@ function renderPlaying(st) {
       </div>
 
       <div class="zone-my-mana">
-        <div class="mana-label">自分マナ</div>
+        <div class="mana-label">MANA</div>
         <div class="mana-row">${myManaRow}</div>
       </div>
 
