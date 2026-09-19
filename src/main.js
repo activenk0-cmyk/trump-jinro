@@ -491,10 +491,7 @@ function renderPlaying(st) {
         <div class="slot-row">${myRoleRow}</div>
       </div>
 
-      <div class="zone-my-mana">
-        <div class="mana-label">MANA</div>
-        <div class="mana-row">${myManaRow}</div>
-      </div>
+      <div class="zone-mana-bar"><div class="mana-label">MANA</div><div class="mana-row">${myManaRow}</div></div>
 
       <div class="zone-hand">
         <div class="hand-actions-row">${handActionsHtml}</div>
