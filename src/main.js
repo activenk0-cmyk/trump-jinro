@@ -435,8 +435,8 @@ function renderPlaying(st) {
   const oppHandCount = st.hands?.[opp]?.length ?? 0;
 
   const oppRoleRow = renderFieldRow(st.roleDiscard?.[opp] || [], 6);
-  const oppCitizenRow = renderFieldRow(st.table[opp] || [], 6);
-  const myCitizenRow = renderFieldRow(st.table[mySlot] || [], 6);
+  const oppCitizenRow = renderFieldRow((st.table[opp] || []).filter((c) => c.type === "citizen"), 6);
+  const myCitizenRow = renderFieldRow((st.table[mySlot] || []).filter((c) => c.type === "citizen"), 6);
   const myRoleRow = renderFieldRow(st.roleDiscard?.[mySlot] || [], 6);
 
   const cn = st.constraints ? st.constraints[mySlot] : null;
