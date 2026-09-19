@@ -19,7 +19,7 @@ const SPRITE_ROWS = 5;
 
 // 横：均等（0,20,40,60,80,100%）
 // 縦：均等割だと中央行が下にズレる報告のため各行を個別補正。値を小さくすると上へ。
-const SPRITE_ROW_Y = [-1.5, 26.5, 53, 76.5, 100]; // %
+const SPRITE_ROW_Y = [-1.1, 26.5, 53, 76.5, 100]; // %
 
 function getSpriteIndex(card) {
   if (card.type === "joker") return 28 + (Number(card.id) % 2 === 0 ? 0 : 1);
