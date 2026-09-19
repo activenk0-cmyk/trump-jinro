@@ -46,9 +46,11 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
 .landing-title {
   font-family: "Cinzel", "Noto Sans JP", serif;
   font-size: 40px; font-weight: 900; letter-spacing: 0.04em; margin: 0; line-height: 1.1;
-  background: linear-gradient(175deg, #fff6d0 0%, #ffd76a 30%, #b8860b 55%, #ffe89a 80%, #8a6a1f 100%);
+  /* シルバーのグラデーションに変更 */
+  background: linear-gradient(175deg, #ffffff 0%, #d3d3d3 30%, #808080 55%, #f5f5f5 80%, #696969 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
-  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.9)) drop-shadow(0 0 18px rgba(255,200,80,0.35));
+  /* 黄色の光彩をシルバー系(200,200,200)に変更 */
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.9)) drop-shadow(0 0 18px rgba(200,200,200,0.35));
 }
 .landing-title-underline { height: 2px; width: 72%; margin: 8px auto 0; background: linear-gradient(90deg, transparent, #c8a24a, #ffe89a, #c8a24a, transparent); box-shadow: 0 0 12px rgba(255,215,120,0.5); }
 .landing-sub { font-family: "Cinzel", serif; font-size: 12px; letter-spacing: 0.4em; margin: 12px 0 34px; color: #d9b96a; text-shadow: 0 1px 3px rgba(0,0,0,0.8), 0 0 10px rgba(200,160,70,0.35); }
