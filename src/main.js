@@ -45,7 +45,7 @@ function spritePosition(index) {
 function spritePositionField(index) {
   const col = index % SPRITE_COLS;
   const row = Math.floor(index / SPRITE_COLS);
-  const k = 1 / 0.45; // ≒1.4286
+  const k = 1 / 0.52; // ≒1.4286
   // 拡大後の背景幅 = 元幅 * k。1セルの左端割合(元) = col/(cols) 。
   // background-position% = セル左端割合 / (1 - 表示幅割合) 。表示幅割合 = 1/(cols*k)
   const cellLeftFracX = col / SPRITE_COLS;             // 元シートでのセル左端(0〜1)
