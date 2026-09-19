@@ -186,12 +186,22 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
 /* ===================== MANA バー（マナクリスタル風） ===================== */
 .zone-mana-bar {
   flex: 0 0 auto;
-  margin: 2px auto 0;
+  width: 349px;              /* 6×54px + 5×5px gap = slot-rowと同じ幅 */
+  max-width: 100%;
+  margin: 2px auto 0;        /* auto marginで中央配置 → slot-rowと左端が揃う */
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 6px;
+  padding: 0;
 }
+.zone-mana-bar.opp-mana {    /* 相手用：header内に組み込むので余白・幅指定を解除 */
+  width: auto;
+  max-width: none;
+  margin: 0;
+  gap: 6px;
+}
+.zone-mana-bar.opp-mana .mana-slot { width: 14px; height: 14px; }
+.zone-mana-bar.opp-mana .mana-label { font-size: 9px; letter-spacing: 0.18em; }
 .mana-label {
   font-family: "Cinzel", serif;
   font-size: 10px;
