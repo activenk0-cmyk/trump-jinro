@@ -176,8 +176,15 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
   box-shadow: 0 0 4px rgba(255,215,0,0.25);
 }
 
-/* 自分マナゾーン（役職置き場と手札の間） */
-.zone-my-mana { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 2px 0; }
+/* マナゾーン（役職カード列の左端に揃える） */
+.zone-mana-bar {
+  flex: 0 0 auto;
+  width: 349px; /* 6枚×54px + 5gap×5px = slot-rowと同幅 */
+  margin: 1px auto 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
 
 /* --- 相手フィールド --- */
 .zone-opp-field { flex: 0 0 auto; display: flex; flex-direction: column; gap: 3px; margin-top: 6px; }
