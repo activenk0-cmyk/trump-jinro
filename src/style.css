@@ -75,7 +75,14 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
 /* ===================== 待機画面 ===================== */
 .page-pad { padding: 20px 16px; height: 100dvh; max-height: 100dvh; overflow-y: auto; }
 .duel-header { text-align: center; margin-bottom: 14px; }
-.duel-title { font-family: "Cinzel", serif; font-size: 24px; font-weight: 900; letter-spacing: 0.03em; background: linear-gradient(175deg, #fff6d0, #ffd76a 40%, #b8860b 70%, #ffe89a); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.85)) drop-shadow(0 0 12px rgba(255,200,80,0.3)); }
+.duel-title {
+  font-family: "Cinzel", serif; font-size: 24px; font-weight: 900; letter-spacing: 0.03em;
+  /* シルバーのグラデーションに変更 */
+  background: linear-gradient(175deg, #ffffff, #d3d3d3 40%, #808080 70%, #f5f5f5);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  /* こちらの光彩もシルバー系に変更 */
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.85)) drop-shadow(0 0 12px rgba(200,200,200,0.3));
+}
 .room-id-card { background: linear-gradient(160deg, rgba(106,47,184,0.28), rgba(58,22,96,0.16)); border: 1px solid rgba(255,215,0,0.42); border-radius: 16px; padding: 16px; text-align: center; margin-bottom: 16px; box-shadow: 0 0 26px rgba(106,47,184,0.3), inset 0 1px 0 rgba(255,255,255,0.08); }
 .room-id-label { font-size: 11px; letter-spacing: 0.3em; color: #d8c4ff; margin-bottom: 4px; }
 .room-id-value { font-family: "Cinzel", monospace; font-size: 32px; font-weight: 900; letter-spacing: 0.14em; color: #ffe066; text-shadow: 0 0 18px rgba(255,224,102,0.65); margin-bottom: 10px; }
