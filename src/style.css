@@ -52,8 +52,21 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
   /* 黄色の光彩をシルバー系(200,200,200)に変更 */
   filter: drop-shadow(0 2px 3px rgba(0,0,0,0.9)) drop-shadow(0 0 18px rgba(200,200,200,0.35));
 }
-.landing-title-underline { height: 2px; width: 72%; margin: 8px auto 0; background: linear-gradient(90deg, transparent, #c8a24a, #ffe89a, #c8a24a, transparent); box-shadow: 0 0 12px rgba(255,215,120,0.5); }
-.landing-sub { font-family: "Cinzel", serif; font-size: 12px; letter-spacing: 0.4em; margin: 12px 0 34px; color: #d9b96a; text-shadow: 0 1px 3px rgba(0,0,0,0.8), 0 0 10px rgba(200,160,70,0.35); }
+/* タイトル下の下線 (63行目付近) */
+.landing-title-underline {
+  height: 2px; width: 72%; margin: 8px auto 0;
+  /* シルバーのグラデーションと光彩に変更 */
+  background: linear-gradient(90deg, transparent, #a9a9a9, #e0e0e0, #a9a9a9, transparent);
+  box-shadow: 0 0 12px rgba(200,200,200,0.5);
+}
+
+/* サブタイトル (64行目付近) */
+.landing-sub {
+  font-family: "Cinzel", serif; font-size: 12px; letter-spacing: 0.4em; margin: 12px 0 34px;
+  /* シルバー系の文字色と光彩に変更 */
+  color: #d3d3d3;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8), 0 0 10px rgba(200,200,200,0.35);
+}
 .landing-buttons { display: flex; flex-direction: column; gap: 16px; width: 100%; max-width: 320px; }
 .lobby-btn {
   position: relative; width: 100%; padding: 18px; font-size: 17px; font-weight: 800; letter-spacing: 0.08em;
