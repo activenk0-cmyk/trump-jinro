@@ -447,10 +447,12 @@ function renderPlaying(st) {
 
   const handHtml = (st.hands?.[mySlot] || []).map((c) => handCardHtml(c, isMyTurn && st.phase === "needAction")).join("");
   const mulliganAvailable = !isEnded && st.firstPlayer === mySlot && !st.playerMeta[mySlot].mulliganUsed && !st.playerMeta[mySlot].hasDrawnYet && countCitizens(st.hands[mySlot]) === 0 && st.currentTurn === mySlot;
-  const handActionsHtml = isEnded
+ const handActionsHtml = isEnded
     ? `<button class="success-btn" id="rematchBtn">🔁 もう一度対戦する</button><button class="danger" id="leaveBtn2">退室する</button>`
-    : `${isMyTurn && st.phase === "needDraw" ? `<button id="drawBtn">🎴 山札から引く</button>` : ""}${mulliganAvailable ? `<button class="warning-btn" id="mulliganBtn">🔄 引き直す</button>` : ""}`;
-
+    : mulliganAvailable
+      ? `<button class="warning-btn" id="mulliganBtn">🔄 役職カードのみのため強制引き直し</button>`
+      : `${isMyTurn && st.phase === "needDraw" ? `<button id="drawBtn">🎴 山札から引く</button>` : ""}`;
+  
   const wolfHint = st.info?.[mySlot] ? `🔎 ${st.info[mySlot]}` : "";
   const constraintLine = cText ? `<span class="constraint-txt">⚠️ ${cText}</span>` : "";
   const wolfHintRowHtml = !isEnded && (wolfHint || constraintLine) ? `<div class="wolf-hint-row">${wolfHint}${constraintLine}</div>` : "";
