@@ -127,7 +127,8 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
 /* ===================== 対戦盤面 ===================== */
 .board-screen { height: 100dvh; max-height: 100dvh; display: flex; flex-direction: column; overflow: hidden; padding: calc(6px + env(safe-area-inset-top)) 8px calc(8px + env(safe-area-inset-bottom)); gap: 4px; position: relative; }
 
-.zone-header { flex: 0 0 auto; display: flex; justify-content: space-between; align-items: flex-start; }
+.zone-header { flex: 0 0 auto; display: flex; justify-content: space-between; align-items: stretch; }
+.header-left { display: flex; flex-direction: column; gap: 3px; justify-content: space-between; }
 .opp-hand-block { display: flex; flex-direction: column; gap: 3px; }
 .opp-hand-mini { display: flex; align-items: center; gap: 6px; }
 .mini-back { width: 26px; }
