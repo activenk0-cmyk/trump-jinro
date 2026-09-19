@@ -134,7 +134,7 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
 .mini-back { width: 26px; }
 .opp-hand-count { font-size: 12px; font-weight: 800; color: #d8c4ff; text-shadow: 0 1px 2px rgba(0,0,0,.7); }
 .opp-cost-line { font-size: 11px; font-weight: 800; color: #ffe066; text-shadow: 0 1px 2px rgba(0,0,0,.7); }
-.header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; justify-content: space-between; }
 .leave-btn-mini { font-size: 10px; padding: 4px 10px; border-radius: 8px; background: linear-gradient(160deg, #6d2036, #3c1120); border: 1px solid #c8a24a; color: #f6e4c8; }
 .citizen-mini-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; width: 96px; }
 .status-cell { font-size: 11px; font-weight: 800; text-align: center; padding: 4px 0; border-radius: 4px; background: rgba(255,255,255,0.08); text-shadow: 0 1px 2px rgba(0,0,0,.6); }
