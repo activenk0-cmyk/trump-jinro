@@ -194,14 +194,10 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
   gap: 10px;
   padding: 0;
 }
-.zone-mana-bar.opp-mana {    /* 相手用：header内に組み込むので余白・幅指定を解除 */
-  width: auto;
-  max-width: none;
-  margin: 0;
-  gap: 6px;
+.zone-mana-bar.opp-mana {    /* 相手用：自分側と同じ幅・中央寄せで左端を揃える */
+  gap: 10px;
+  margin: 0 auto 2px;
 }
-.zone-mana-bar.opp-mana .mana-slot { width: 14px; height: 14px; }
-.zone-mana-bar.opp-mana .mana-label { font-size: 9px; letter-spacing: 0.18em; }
 .mana-label {
   font-family: "Cinzel", serif;
   font-size: 10px;
