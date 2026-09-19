@@ -152,7 +152,7 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
 .zone-center { flex: 0 0 auto; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 4px 0; }
 .center-top-grid { display: grid; grid-template-columns: 48px 1fr 48px; align-items: center; gap: 8px; }
 .side-icon-col { display: flex; align-items: center; justify-content: center; }
-.center-log-btn { width: 44px; height: 44px; border-radius: 10px; font-size: 17px; display: flex; align-items: center; justify-content: center; background: linear-gradient(160deg, #3a3768, #211d3e); border: 1px solid rgba(255,255,255,0.14); }
+.center-log-btn { width: 44px; height: 44px; border-radius: 10px; font-family: "Cinzel", serif; font-size: 13px; font-weight: 900; letter-spacing: 0.12em; color: #d8c4ff; display: flex; align-items: center; justify-content: center; background: linear-gradient(160deg, #3a3768, #211d3e); border: 1px solid rgba(255,255,255,0.14); text-shadow: 0 1px 2px rgba(0,0,0,0.7); }
 .deck-pile { width: 44px; aspect-ratio: 10/9; border-radius: 8px; background: linear-gradient(160deg, #2f2058, #170f30); border: 1px solid rgba(255,215,0,0.35); display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.6), inset 0 0 12px rgba(120,80,200,0.35); position: relative; }
 .deck-pile::before { content: ""; position: absolute; inset: 3px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.12); }
 .deck-pile-label { font-size: 9px; color: #ede0ff; text-shadow: 0 1px 2px rgba(0,0,0,.8); letter-spacing: 0.05em; }
