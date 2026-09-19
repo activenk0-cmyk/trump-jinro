@@ -460,6 +460,7 @@ function renderPlaying(st) {
         <div class="header-left">
           <div class="opp-hand-mini"><div class="card card-back mini-back"></div><span class="opp-hand-count">×${oppHandCount}</span></div>
           <div class="opp-cost-line">コスト：${oppCost}</div>
+          <div class="zone-mana-bar opp-mana"><div class="mana-label">MANA</div><div class="mana-row">${oppManaRow}</div></div>
         </div>
         <div class="header-right">
           <button class="leave-btn-mini" id="leaveHeaderBtn">退室</button>
@@ -467,7 +468,6 @@ function renderPlaying(st) {
         </div>
       </div>
 
-      <div class="zone-mana-bar"><div class="mana-label">MANA</div><div class="mana-row">${oppManaRow}</div></div>
       <div class="zone-opp-field">
         <div class="slot-row">${oppRoleRow}</div>
         <div class="slot-row">${oppCitizenRow}</div>
