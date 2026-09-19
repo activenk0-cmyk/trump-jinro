@@ -16,10 +16,7 @@ const SPRITE_SUIT_ORDER = ["♣", "♦", "♥", "♠"];
 const SPRITE_RANK_ORDER = ["1", "2", "3", "4", "J", "Q", "K"];
 const SPRITE_COLS = 6;
 const SPRITE_ROWS = 5;
-
-// 横：均等（0,20,40,60,80,100%）
-// 縦：均等割だと中央行が下にズレる報告のため各行を個別補正。値を小さくすると上へ。
-const SPRITE_ROW_Y = [-0.45, 26.5, 53.2, 77, 100]; // %
+const SPRITE_ROW_Y = [-0.45, 26.5, 53.2, 77, 100];
 
 function getSpriteIndex(card) {
   if (card.type === "joker") return 28 + (Number(card.id) % 2 === 0 ? 0 : 1);
@@ -30,7 +27,6 @@ function getSpriteIndex(card) {
   return suitIdx * 7 + rankIdx;
 }
 
-// 通常表示（background-size: 600% 500% に対するパーセント位置）
 function spritePosition(index) {
   const col = index % SPRITE_COLS;
   const row = Math.floor(index / SPRITE_COLS);
@@ -39,20 +35,14 @@ function spritePosition(index) {
   return `${x}% ${y}%`;
 }
 
-// 場用（左上70%クロップ = background-size: 857% 714% に対するパーセント位置）
-// 拡大率 k = 1/0.7。X方向のセル数は実質 6/k、位置百分率は col/(6/k - 1) 相当だが、
-// 「左上を左上に合わせる」ため、拡大後の座標系での各セル左端割合を算出する。
 function spritePositionField(index) {
   const col = index % SPRITE_COLS;
   const row = Math.floor(index / SPRITE_COLS);
-  const k = 1 / 0.52; // ≒1.4286
-  // 拡大後の背景幅 = 元幅 * k。1セルの左端割合(元) = col/(cols) 。
-  // background-position% = セル左端割合 / (1 - 表示幅割合) 。表示幅割合 = 1/(cols*k)
-  const cellLeftFracX = col / SPRITE_COLS;             // 元シートでのセル左端(0〜1)
-  const viewFracX = 1 / (SPRITE_COLS * k);             // 表示窓の幅割合
+  const k = 1 / 0.52;
+  const cellLeftFracX = col / SPRITE_COLS;
+  const viewFracX = 1 / (SPRITE_COLS * k);
   const posX = (cellLeftFracX / (1 - viewFracX)) * 100;
-  // Y方向は行補正値を使い、同様に左上寄せ
-  const cellTopFracY = (SPRITE_ROW_Y[row] ?? 0) / 100 * ((SPRITE_ROWS - 1) / SPRITE_ROWS); // 補正込みの上端割合近似
+  const cellTopFracY = (SPRITE_ROW_Y[row] ?? 0) / 100 * ((SPRITE_ROWS - 1) / SPRITE_ROWS);
   const viewFracY = 1 / (SPRITE_ROWS * k);
   const posY = (cellTopFracY / (1 - viewFracY)) * 100;
   return `${posX}% ${posY}%`;
@@ -83,7 +73,7 @@ function validateTurnAction(st, s, ph) {
   if (st.phase !== ph) throw new GameActionError("今はその操作を行えるタイミングではありません。");
 }
 function finishTurn(st, s) { st.constraints[s] = null; st.currentTurn = opponent(s); st.phase = "needDraw"; }
-function endGame(st, w, r) { st.status = "ended"; st.winner = w; st.reason = r; addLog(st, "🎉 ゲーム終了：プレイヤー" + w + "の勝利（" + r + "）"); }
+function endGame(st, w, r) { st.status = "ended"; st.winner = w; st.reason = r; addLog(st, "ゲーム終了：プレイヤー" + w + "の勝利（" + r + "）"); }
 
 function reduceJoin(st, s) {
   if (st.status === "waiting") { if (!st.players[s]) { st.players[s] = true; addLog(st, "プレイヤー" + s + "が入室しました。"); } }
@@ -269,7 +259,6 @@ function clearSession() { localStorage.removeItem(SESSION_KEY); }
 const app = document.getElementById("app");
 let roomId = null, mySlot = null, unsubscribe = null, lastSeenSeq = 0, endAnnounced = false;
 
-// 手札は常に通常表示（透過/グレースケール/発光アニメを付けない）
 function cardVisualHtml(card, opts = {}) {
   const { interactive = false, disabled = true, dataCardId = null, extraClass = "", field = false } = opts;
   const da = disabled ? "disabled" : "";
@@ -287,7 +276,6 @@ function handCardHtml(card, canAct) {
   const pos = idx !== null ? spritePosition(idx) : "0% 0%";
   const ic = canAct ? "interactive" : "";
   const da = canAct ? "" : "disabled";
-  // 手札は常に通常見た目。押せるかどうかだけ interactive/disabled で制御。
   return `<button ${da} data-card-id="${card.id}" class="card hand-card ${k} ${ic}" style="background-image:url('/cards.png'); background-position:${pos};"></button>`;
 }
 function renderFieldRow(cards, minSlots) {
@@ -299,15 +287,16 @@ function renderFieldRow(cards, minSlots) {
   while (items.length < total) items.push(`<div class="field-slot empty"></div>`);
   return items.join("");
 }
-function statusCellHtml(mk, n, played) { const cls = RED_MARKS.includes(mk) ? "mark-red" : "mark-black"; return `<div class="status-cell ${cls} ${played ? "played" : ""}">${mk}${n}</div>`; }
-
-// 裏向きセットカード（コスト用）のスタック表示
-function costStackHtml(cards) {
-  if (!cards || cards.length === 0) return "";
-  const shown = cards.slice(-3);
-  const inner = shown.map((_, i) => `<span class="cost-stack-card" style="--i:${i}"></span>`).join("");
-  return `<span class="cost-stack"><span class="cost-stack-cards">${inner}</span><span class="cost-stack-badge">×${cards.length}</span></span>`;
+function renderManaRow(costCards, max) {
+  const items = [];
+  const arr = costCards || [];
+  for (let i = 0; i < max; i++) {
+    if (i < arr.length) items.push(`<div class="mana-slot filled"><div class="mana-card-back"></div></div>`);
+    else items.push(`<div class="mana-slot"></div>`);
+  }
+  return items.join("");
 }
+function statusCellHtml(mk, n, played) { const cls = RED_MARKS.includes(mk) ? "mark-red" : "mark-black"; return `<div class="status-cell ${cls} ${played ? "played" : ""}">${mk}${n}</div>`; }
 
 function showModal(h) { const o = document.getElementById("modalOverlay"); document.getElementById("modalContent").innerHTML = h; o.classList.add("show"); }
 function closeModal() { const o = document.getElementById("modalOverlay"); if (o) o.classList.remove("show"); }
@@ -401,7 +390,7 @@ function renderWaiting(st) {
   app.innerHTML = `
     <div class="page-pad">
       <div class="duel-header"><div class="duel-title">トランプ人狼</div></div>
-      <div class="room-id-card"><div class="room-id-label">ROOM ID</div><div class="room-id-value">${roomId}</div><button class="copy-btn" id="copyIdBtn">📋 コピー</button></div>
+      <div class="room-id-card"><div class="room-id-label">ROOM ID</div><div class="room-id-value">${roomId}</div><button class="copy-btn" id="copyIdBtn">コピー</button></div>
       <div class="waiting-panel flat-section panel">
         <div class="flat-label">対戦相手を待っています</div>
         <div class="player-slot-row"><div class="player-slot ${st.players.A ? "ready" : ""}">A ${st.players.A ? "✓" : "…"}</div><div class="vs-mark">VS</div><div class="player-slot ${st.players.B ? "ready" : ""}">B ${st.players.B ? "✓" : "…"}</div></div>
@@ -418,7 +407,7 @@ function renderWaiting(st) {
         <button class="danger" id="leaveBtn">退室する</button>
       </div>
     </div>${modalOverlayHtml}`;
-  document.getElementById("copyIdBtn").onclick = () => { navigator.clipboard.writeText(roomId).then(() => { const b = document.getElementById("copyIdBtn"); b.textContent = "✓ コピーしました"; setTimeout(() => (b.textContent = "📋 コピー"), 1500); }); };
+  document.getElementById("copyIdBtn").onclick = () => { navigator.clipboard.writeText(roomId).then(() => { const b = document.getElementById("copyIdBtn"); b.textContent = "✓ コピー済"; setTimeout(() => (b.textContent = "コピー"), 1500); }); };
   document.getElementById("saveSettingsBtn").onclick = async () => { try { await Game.updateSettings(roomId, mySlot, document.getElementById("infoTypeSelect").value, document.getElementById("winCountSelect").value, document.getElementById("jokerCostSelect").value); showSimpleModal("設定を保存しました。"); } catch (e) { showError(e); } };
   document.getElementById("startBtn").onclick = async () => { try { lastSeenSeq = 0; endAnnounced = false; await Game.start(roomId); } catch (e) { showError(e); } };
   document.getElementById("leaveBtn").onclick = leaveRoom;
@@ -429,15 +418,21 @@ function renderPlaying(st) {
   const opp = opponent(mySlot);
   const isMyTurn = !isEnded && st.currentTurn === mySlot;
 
+  // 市民チェック表
   const playedSet = new Set();
   ["A", "B"].forEach((s) => (st.table[s] || []).forEach((c) => { if (c.type === "citizen") playedSet.add(c.mark + c.number); }));
   const citizenGridHtml = MARKS.map((mk) => NUMBERS.map((n) => statusCellHtml(mk, n, playedSet.has(mk + n))).join("")).join("");
   const oppHandCount = st.hands?.[opp]?.length ?? 0;
 
+  // フィールド描画（市民カードのみフィルタ）
   const oppRoleRow = renderFieldRow(st.roleDiscard?.[opp] || [], 6);
   const oppCitizenRow = renderFieldRow((st.table[opp] || []).filter((c) => c.type === "citizen"), 6);
   const myCitizenRow = renderFieldRow((st.table[mySlot] || []).filter((c) => c.type === "citizen"), 6);
   const myRoleRow = renderFieldRow(st.roleDiscard?.[mySlot] || [], 6);
+
+  // マナゾーン描画
+  const oppManaRow = renderManaRow(st.costCards?.[opp], 4);
+  const myManaRow = renderManaRow(st.costCards?.[mySlot], 4);
 
   const cn = st.constraints ? st.constraints[mySlot] : null;
   let cText = "";
@@ -452,31 +447,34 @@ function renderPlaying(st) {
   const seerLabel = mySlot === "A" ? "安全な数字" : "安全なマーク";
 
   let turnChipHtml;
-  if (isEnded) { const w = st.winner === mySlot; turnChipHtml = `<div class="chip turn-chip ${w ? "win-chip" : "lose-chip"}">${w ? "🏆 VICTORY" : "💀 DEFEAT"}</div>`; }
-  else turnChipHtml = `<div class="chip turn-chip ${isMyTurn ? "my-turn" : "opp-turn"}">${isMyTurn ? "🎯 あなたのターン" : "⌛ 相手のターン"}</div>`;
+  if (isEnded) { const w = st.winner === mySlot; turnChipHtml = `<div class="chip turn-chip ${w ? "win-chip" : "lose-chip"}">${w ? "VICTORY" : "DEFEAT"}</div>`; }
+  else turnChipHtml = `<div class="chip turn-chip ${isMyTurn ? "my-turn" : "opp-turn"}">${isMyTurn ? "あなたのターン" : "相手のターン"}</div>`;
 
   const handHtml = (st.hands?.[mySlot] || []).map((c) => handCardHtml(c, isMyTurn && st.phase === "needAction")).join("");
   const mulliganAvailable = !isEnded && st.firstPlayer === mySlot && !st.playerMeta[mySlot].mulliganUsed && !st.playerMeta[mySlot].hasDrawnYet && countCitizens(st.hands[mySlot]) === 0 && st.currentTurn === mySlot;
   const handActionsHtml = isEnded
-    ? `<button class="success-btn" id="rematchBtn">🔁 もう一度対戦する</button><button class="danger" id="leaveBtn2">退室する</button>`
-    : `${isMyTurn && st.phase === "needDraw" ? `<button id="drawBtn">🎴 山札から引く</button>` : ""}${mulliganAvailable ? `<button class="warning-btn" id="mulliganBtn">🔄 引き直す</button>` : ""}`;
+    ? `<button class="success-btn" id="rematchBtn">もう一度対戦する</button><button class="danger" id="leaveBtn2">退室する</button>`
+    : `${isMyTurn && st.phase === "needDraw" ? `<button id="drawBtn">山札から引く</button>` : ""}${mulliganAvailable ? `<button class="warning-btn" id="mulliganBtn">引き直す</button>` : ""}`;
 
-  const wolfHint = st.info?.[mySlot] ? `🔎 ${st.info[mySlot]}` : "";
-  const constraintLine = cText ? `<span class="constraint-txt">⚠️ ${cText}</span>` : "";
+  const wolfHint = st.info?.[mySlot] ? st.info[mySlot] : "";
+  const constraintLine = cText ? `<span class="constraint-txt">${cText}</span>` : "";
   const wolfHintRowHtml = !isEnded && (wolfHint || constraintLine) ? `<div class="wolf-hint-row">${wolfHint}${constraintLine}</div>` : "";
   const seerRowHtml = `<div class="center-seer-row"><span class="seer-label">占い師で把握した${seerLabel}：</span>${seerValues.length > 0 ? seerValues.map((v) => `<span class="seer-item">${v}</span>`).join("") : `<span style="opacity:0.6;">まだありません</span>`}</div>`;
 
-  const myCostStack = costStackHtml(st.costCards?.[mySlot]);
-  const oppCostStack = costStackHtml(st.costCards?.[opp]);
-
   app.innerHTML = `
     <div class="board-screen">
+
       <div class="zone-header">
         <div class="opp-hand-block">
           <div class="opp-hand-mini"><div class="card card-back mini-back"></div><span class="opp-hand-count">×${oppHandCount}</span></div>
           <div class="opp-cost-line">コスト：${oppCost}</div>
         </div>
         <div class="header-right"><button class="leave-btn-mini" id="leaveHeaderBtn">退室</button><div class="citizen-mini-grid">${citizenGridHtml}</div></div>
+      </div>
+
+      <div class="zone-opp-mana">
+        <div class="mana-label">相手マナ</div>
+        <div class="mana-row">${oppManaRow}</div>
       </div>
 
       <div class="zone-opp-field">
@@ -486,13 +484,10 @@ function renderPlaying(st) {
 
       <div class="zone-center">
         <div class="center-top-grid">
-          <div class="side-icon-col"><button class="center-log-btn" id="logToggleBtn">📜</button></div>
+          <div class="side-icon-col"><button class="center-log-btn" id="logToggleBtn">LOG</button></div>
           <div class="center-stack">
             <div class="center-action-row">${turnChipHtml}${!isEnded ? `<button class="accuse-btn" id="accuseFab">告発</button>` : ""}</div>
-            <div class="cost-line">
-              <span class="cost-block cost-block-mine"><span class="cost-mine">あなたのコスト：${myCost}</span>${myCostStack}</span>
-              <span class="cost-block cost-block-opp">${oppCostStack}<span class="cost-opp">相手のコスト：${oppCost}</span></span>
-            </div>
+            <div class="cost-line"><span class="cost-mine">あなたのコスト：${myCost}</span><span class="cost-opp">相手のコスト：${oppCost}</span></div>
           </div>
           <div class="side-icon-col"><div class="deck-pile"><span class="deck-pile-label">山札</span><span class="deck-pile-count">${st.drawPile?.length ?? 0}枚</span></div></div>
         </div>
@@ -503,6 +498,11 @@ function renderPlaying(st) {
       <div class="zone-my-field">
         <div class="slot-row">${myCitizenRow}</div>
         <div class="slot-row">${myRoleRow}</div>
+      </div>
+
+      <div class="zone-my-mana">
+        <div class="mana-label">自分マナ</div>
+        <div class="mana-row">${myManaRow}</div>
       </div>
 
       <div class="zone-hand">
@@ -528,7 +528,7 @@ function renderPlaying(st) {
 
   document.getElementById("leaveHeaderBtn").onclick = confirmLeaveMidGame;
   const drawBtn = document.getElementById("drawBtn"); if (drawBtn) drawBtn.onclick = () => Game.draw(roomId, mySlot).catch(showError);
-  const mulliganBtn = document.getElementById("mulliganBtn"); if (mulliganBtn) mulliganBtn.onclick = () => showModal(`<div style="color:#f4b400;font-size:13px;margin-bottom:10px;">⚠️ 手札を相手に公開してから引き直します。よろしいですか？</div><button class="warning-btn" onclick="window.__mulligan()">引き直す</button><button class="secondary" onclick="window.__closeModal()">キャンセル</button>`);
+  const mulliganBtn = document.getElementById("mulliganBtn"); if (mulliganBtn) mulliganBtn.onclick = () => showModal(`<div style="color:#f4b400;font-size:13px;margin-bottom:10px;">手札を相手に公開してから引き直します。よろしいですか？</div><button class="warning-btn" onclick="window.__mulligan()">引き直す</button><button class="secondary" onclick="window.__closeModal()">キャンセル</button>`);
   document.querySelectorAll(".hand-card").forEach((btn) => {
     btn.onclick = () => {
       const cardId = btn.dataset.cardId; const card = st.hands[mySlot].find((c) => c.id === cardId); if (!card) return;
@@ -574,7 +574,7 @@ function maybeAnnounceTurn(st) {
     if (btn) playSummonEffect(btn);
   });
   const actorText = la.actorSlot === mySlot ? "あなたが" : "相手が";
-  const nextText = st.currentTurn === mySlot ? "🎯 あなたのターン" : "⌛ 相手のターン";
+  const nextText = st.currentTurn === mySlot ? "あなたのターン" : "相手のターン";
   showToast(`${actorText}カードを出しました`, nextText);
 }
 
@@ -583,8 +583,8 @@ window.__playCitizen = (id) => { closeModal(); Game.playCitizen(roomId, mySlot, 
 window.__playRole = (id, o) => {
   closeModal();
   Game.playRole(roomId, mySlot, id, o).catch((err) => {
-    if (err.payload?.emergencyAvailable) showModal(`<div style="color:#f4b400;font-size:13px;margin-bottom:10px;">⚠️ コストが足りません。手札に市民カードがなく、コストも0のため、緊急セット（裏向きで出す）が可能です。</div><button class="warning-btn" onclick="window.__playRole('${id}', {emergencySet:true})">緊急セットする</button><button class="secondary" onclick="window.__closeModal()">キャンセル</button>`);
-    else if (err.payload?.kForcedFacedownAvailable) showModal(`<div style="color:#f4b400;font-size:13px;margin-bottom:10px;">⚠️ 騎士の効果により、役職カードは効果を発動できません。手札に市民カードが無いため、裏向きで場に出されます。</div><button class="warning-btn" onclick="window.__playRole('${id}', {forceFacedownByBlock:true})">裏向きで出す</button><button class="secondary" onclick="window.__closeModal()">キャンセル</button>`);
+    if (err.payload?.emergencyAvailable) showModal(`<div style="color:#f4b400;font-size:13px;margin-bottom:10px;">コストが足りません。手札に市民カードがなく、コストも0のため、緊急セット（裏向きで出す）が可能です。</div><button class="warning-btn" onclick="window.__playRole('${id}', {emergencySet:true})">緊急セットする</button><button class="secondary" onclick="window.__closeModal()">キャンセル</button>`);
+    else if (err.payload?.kForcedFacedownAvailable) showModal(`<div style="color:#f4b400;font-size:13px;margin-bottom:10px;">騎士の効果により、役職カードは効果を発動できません。手札に市民カードが無いため、裏向きで場に出されます。</div><button class="warning-btn" onclick="window.__playRole('${id}', {forceFacedownByBlock:true})">裏向きで出す</button><button class="secondary" onclick="window.__closeModal()">キャンセル</button>`);
     else showError(err);
   });
 };
