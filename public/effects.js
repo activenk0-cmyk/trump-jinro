@@ -21,23 +21,50 @@
         }
       }
 
-      /* 役職カード：キラキラ光の帯（手札・場の両方） */
-      .card.role-frame {
+      /* 役職カード：手札にある時だけ、金の粒子が外側に広がる演出 */
+      .hand-card.role-frame {
         position: relative;
+        overflow: visible !important;
+        animation: tjGoldGlow 2.2s ease-in-out infinite;
       }
-      .card.role-frame::after {
+      @keyframes tjGoldGlow {
+        0%, 100% {
+          box-shadow: 0 2px 6px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.1),
+                      0 0 6px rgba(255,215,0,0.35);
+        }
+        50% {
+          box-shadow: 0 2px 6px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.1),
+                      0 0 22px rgba(255,215,0,0.85), 0 0 38px rgba(255,200,80,0.35);
+        }
+      }
+      .hand-card.role-frame::before {
         content: "";
         position: absolute;
-        inset: 0;
-        background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,0.9) 50%, transparent 65%);
-        background-size: 260% 260%;
-        mix-blend-mode: screen;
-        animation: tjSparkle 2.4s linear infinite;
+        inset: -14px;
+        border-radius: 50%;
         pointer-events: none;
+        background:
+          radial-gradient(3px 3px at 50% 8%,  #ffe9a0 0%, rgba(255,233,160,0) 70%),
+          radial-gradient(3px 3px at 82% 22%, #ffd76a 0%, rgba(255,215,106,0) 70%),
+          radial-gradient(2.5px 2.5px at 88% 55%, #fff3c4 0%, rgba(255,243,196,0) 70%),
+          radial-gradient(3px 3px at 70% 85%, #ffe9a0 0%, rgba(255,233,160,0) 70%),
+          radial-gradient(2.5px 2.5px at 30% 88%, #ffd76a 0%, rgba(255,215,106,0) 70%),
+          radial-gradient(3px 3px at 12% 60%, #fff3c4 0%, rgba(255,243,196,0) 70%),
+          radial-gradient(2.5px 2.5px at 18% 25%, #ffe9a0 0%, rgba(255,233,160,0) 70%);
+        opacity: 0;
+        animation: tjGoldParticles 2.2s ease-out infinite;
       }
-      @keyframes tjSparkle {
-        0%   { background-position: -140% -140%; }
-        100% { background-position: 140% 140%; }
+      @keyframes tjGoldParticles {
+        0%   { transform: scale(0.55); opacity: 0; }
+        35%  { opacity: 1; }
+        100% { transform: scale(1.35); opacity: 0; }
+      }
+
+      /* 場に置いた役職カードには演出なし（元のデザインのまま） */
+      .field-card.role-frame::before,
+      .field-card.role-frame::after {
+        content: none !important;
+        animation: none !important;
       }
 
       /* リーチ演出：勝利まであと1枚の枠がぷおんぷおん */
