@@ -1,6 +1,7 @@
 import "./style.css";
 import { db } from "./firebase.js";
 import { doc, getDoc, runTransaction, onSnapshot } from "firebase/firestore";
+import { decideCpuAction } from "./cpuAi.js";
 
 const MARKS = ["♠", "♥", "♣", "♦"];
 const NUMBERS = [1, 2, 3, 4];
@@ -51,9 +52,6 @@ function setLastAction(st, actorSlot, description, cardKey, isRole) {
   st.turnSeq += 1;
   st.lastAction = { actorSlot, description, seq: st.turnSeq, cardKey: cardKey || null, isRole: !!isRole };
 }
-// ★追加：CPUの思考材料になる「行動履歴」を記録する。
-// ここでは st.wolf には一切触れず、誰でも見える情報（誰が・何を・強制下だったか・
-// その結果の脱出枚数）だけを積み上げていく。人間が対戦相手の動きを観察するのと同じ情報量。
 function addPlayHistory(st, entry) {
   if (!st.playHistory) st.playHistory = [];
   if (typeof st.historySeq !== "number") st.historySeq = 0;
@@ -101,7 +99,6 @@ function reduceStartGame(st) {
   let infoA, infoB, cluesA, cluesB;
   if (st.settings.infoType === "確定") {
     infoA = `人狼のマークは「${wolfMark}」です。`; infoB = `人狼の数字は「${wolfNumber}」です。`;
-    // ★追加：表示用テキストと同じ内容を、CPUが読み取れる構造化データとしても保持
     cluesA = { attr: "mark", mode: "confirmed", value: wolfMark };
     cluesB = { attr: "number", mode: "confirmed", value: wolfNumber };
   }
@@ -117,16 +114,16 @@ function reduceStartGame(st) {
   st.hands = { A: handA, B: handB }; st.drawPile = deck; st.table = { A: [], B: [] }; st.discard = [];
   st.costCards = { A: [], B: [] };
   st.info = { A: infoA, B: infoB };
-  st.clues = { A: cluesA, B: cluesB }; // ★追加：CPU用の構造化ヒント（表示テキストのinfoとは別枠）
+  st.clues = { A: cluesA, B: cluesB };
   st.seerHistory = { A: [], B: [] }; st.seerRevealLog = { A: [], B: [] }; st.roleDiscard = { A: [], B: [] };
   st.constraints = { A: null, B: null }; st.firstPlayer = fp; st.costPool = { A: 0, B: 0 }; st.turnSeq = 0; st.lastAction = null;
   st.playerMeta = { A: { virtualCostUnused: sp === "A", mulliganUsed: false, hasDrawnYet: false }, B: { virtualCostUnused: sp === "B", mulliganUsed: false, hasDrawnYet: false } };
   st.currentTurn = fp; st.phase = "needDraw"; st.winner = null; st.reason = null;
-  st.playHistory = []; st.historySeq = 0; // ★追加：CPU用の行動履歴（毎ゲーム開始時にリセット）
+  st.playHistory = []; st.historySeq = 0;
   addLog(st, "ゲームを開始しました。先攻：プレイヤー" + fp);
   return st;
 }
-function reduceResetRoom(st) { const ns = { status: "waiting", players: st.players, settings: st.settings, log: st.log || [] }; addLog(ns, "同じルームで新しいゲームの準備を始めました。"); return ns; }
+function reduceResetRoom(st) { const ns = { status: "waiting", players: st.players, settings: st.settings, log: st.log || [], vsCpu: st.vsCpu || false }; addLog(ns, "同じルームで新しいゲームの準備を始めました。"); return ns; }
 function reduceDraw(st, s) {
   validateTurnAction(st, s, "needDraw");
   const meta = st.playerMeta[s];
@@ -148,7 +145,7 @@ function reducePlayCitizen(st, s, cardId) {
   const hand = st.hands[s]; const idx = hand.findIndex((c) => c.id === cardId);
   if (idx === -1) throw new GameActionError("指定されたカードが手札にありません。");
   const card = hand[idx]; if (card.type !== "citizen") throw new GameActionError("市民カードではありません。");
-  const constraintAtPlay = st.constraints[s]; // ★追加：行動時点の制約を履歴用に保持
+  const constraintAtPlay = st.constraints[s];
   checkConstraintForCitizenPlay(st, s, card);
   hand.splice(idx, 1);
   const isWolf = card.mark === st.wolf.mark && card.number === st.wolf.number;
@@ -160,8 +157,6 @@ function reducePlayCitizen(st, s, cardId) {
     const esc = st.table[s].filter((c) => c.type === "citizen").length;
     if (esc >= st.settings.winCount) endGame(st, s, "市民脱出");
   }
-  // ★追加：CPUが「相手が任意で出したのか強制されたのか」「その時どれだけ切迫していたか」を
-  // 後から読み取れるように記録する
   addPlayHistory(st, {
     actor: s, type: "citizen", mark: card.mark, number: card.number,
     wasConstrained: !!constraintAtPlay, constraintType: constraintAtPlay ? constraintAtPlay.type : null,
@@ -233,7 +228,6 @@ function reducePlayRole(st, s, cardId, opt = {}) {
   else if (card.type === "role" && card.role === "K") { st.constraints[opponent(s)] = { type: "blockRoles" }; addLog(st, `${s}が騎士を使用しました。相手は次のターン役職カードを出せません。`); desc = "騎士(K)"; }
   else if (card.type === "joker") { st.constraints[opponent(s)] = { type: "forceAccuse" }; addLog(st, `${s}がジョーカーを使用しました。相手は次のターン告発を強制されます。`); desc = "ジョーカー"; }
   setLastAction(st, s, desc, null, true);
-  // ★追加：CPUがJの占い結果履歴・Qの強制内容・K/ジョーカーの使用タイミングを後から参照できるように記録
   addPlayHistory(st, {
     actor: s,
     type: card.type === "joker" ? "joker" : "role",
@@ -260,7 +254,6 @@ function reduceAccuse(st, s, mark, number) {
   }
   const ok = mark === st.wolf.mark && Number(number) === st.wolf.number;
   if (ok) endGame(st, s, "告発成功"); else endGame(st, opponent(s), "告発失敗");
-  // ★追加：告発の成否・強制下だったかどうかをCPU用に記録
   addPlayHistory(st, {
     actor: s, type: "accuse", mark, number: Number(number),
     wasConstrained: !!c, constraintType: c ? c.type : null,
@@ -280,7 +273,7 @@ function reduceMulligan(st, s) {
   const hand = st.hands[s];
   if (countCitizens(hand) > 0) throw new GameActionError("手札に市民カードがあるため、引き直しはできません。");
   const old = hand.map(cardLabel).join("、");
-  const revealedCards = hand.map((c) => ({ type: c.type, mark: c.mark || null, role: c.role || null })); // ★追加：公開された手札の内訳
+  const revealedCards = hand.map((c) => ({ type: c.type, mark: c.mark || null, role: c.role || null }));
   st.drawPile = st.drawPile.concat(hand); st.hands[s] = []; shuffleArr(st.drawPile);
   for (let i = 0; i < 3; i++) st.hands[s].push(st.drawPile.pop());
   meta.mulliganUsed = true; addLog(st, `プレイヤー${s}が手札（${old}）を公開して引き直しました。`);
@@ -309,7 +302,15 @@ async function runAction(id, fn) {
   });
 }
 const Game = {
-  createRoom: async () => { const id = generateRoomId(); const st = await runAction(id, (s) => reduceJoin(s, "A")); return { id, state: st }; },
+  createRoom: async (vsCpu = false) => {
+    const id = generateRoomId();
+    const st = await runAction(id, (s) => {
+      reduceJoin(s, "A");
+      if (vsCpu) { s.vsCpu = true; s.players.B = true; addLog(s, "CPU対戦：CPUが入室しました。"); }
+      return s;
+    });
+    return { id, state: st };
+  },
   joinExisting: async (i) => { const id = normalizeRoomId(i); const snap = await getDoc(roomRef(id)); if (!snap.exists()) throw new GameActionError("そのルームIDが見つかりません。IDを確認してください。"); const st = await runAction(id, (s) => reduceJoin(s, "B")); return { id, state: st }; },
   updateSettings: (r, s, i, w, j) => runAction(r, (st) => reduceUpdateSettings(st, s, i, w, j)),
   start: (r) => runAction(r, (s) => reduceStartGame(s)),
@@ -325,6 +326,30 @@ const Game = {
 function saveSession() { localStorage.setItem(SESSION_KEY, JSON.stringify({ roomId, slot: mySlot })); }
 function loadSession() { try { const r = localStorage.getItem(SESSION_KEY); return r ? JSON.parse(r) : null; } catch { return null; } }
 function clearSession() { localStorage.removeItem(SESSION_KEY); }
+
+// ============================================================
+// CPU自動ターン
+// ============================================================
+let cpuThinking = false;
+function maybeRunCpuTurn(st) {
+  if (!st || !st.vsCpu || st.status !== "playing" || st.currentTurn !== "B") return;
+  if (cpuThinking) return;
+  cpuThinking = true;
+  setTimeout(async () => {
+    try {
+      const action = decideCpuAction(st, "B");
+      if (action.kind === "draw") await Game.draw(roomId, "B");
+      else if (action.kind === "mulligan") await Game.mulligan(roomId, "B");
+      else if (action.kind === "citizen") await Game.playCitizen(roomId, "B", action.cardId);
+      else if (action.kind === "role") await Game.playRole(roomId, "B", action.cardId, action.opt || {});
+      else if (action.kind === "accuse") await Game.accuse(roomId, "B", action.mark, action.number);
+    } catch (e) {
+      console.error("CPU action failed:", e);
+    } finally {
+      cpuThinking = false;
+    }
+  }, 900);
+}
 
 // ============================================================
 // UI
@@ -428,6 +453,7 @@ function renderLandingScreen() {
       <div class="landing-buttons">
         <button class="lobby-btn btn-create" id="createRoomBtn">部屋を作る</button>
         <button class="lobby-btn btn-join" id="showJoinFormBtn">部屋に入る</button>
+        <button class="lobby-btn btn-create" id="createCpuRoomBtn">CPUと対戦</button>
       </div>
       <div class="join-form" id="joinForm" style="display:none;">
         <label>ルームID</label><input type="text" id="joinIdInput" placeholder="例：AB3XQ9" maxlength="6" />
@@ -435,11 +461,13 @@ function renderLandingScreen() {
       </div>
     </div>${modalOverlayHtml}`;
   document.getElementById("createRoomBtn").onclick = handleCreateRoom;
+  document.getElementById("createCpuRoomBtn").onclick = handleCreateCpuRoom;
   document.getElementById("showJoinFormBtn").onclick = () => { document.getElementById("joinForm").style.display = "block"; document.getElementById("joinIdInput").focus(); };
   document.getElementById("submitJoinBtn").onclick = handleJoinRoomSubmit;
 }
 function renderLoading() { app.innerHTML = `<div class="landing-screen"><div class="loading-text">読み込み中...</div></div>${modalOverlayHtml}`; }
-async function handleCreateRoom() { try { const { id } = await Game.createRoom(); roomId = id; mySlot = "A"; saveSession(); lastSeenSeq = 0; endAnnounced = false; startWatching(); } catch (e) { showError(e); } }
+async function handleCreateRoom() { try { const { id } = await Game.createRoom(false); roomId = id; mySlot = "A"; saveSession(); lastSeenSeq = 0; endAnnounced = false; startWatching(); } catch (e) { showError(e); } }
+async function handleCreateCpuRoom() { try { const { id } = await Game.createRoom(true); roomId = id; mySlot = "A"; saveSession(); lastSeenSeq = 0; endAnnounced = false; startWatching(); } catch (e) { showError(e); } }
 async function handleJoinRoomSubmit() {
   const v = document.getElementById("joinIdInput").value;
   if (!v || !v.trim()) { showSimpleModal("ルームIDを入力してください。"); return; }
@@ -452,22 +480,24 @@ function startWatching() {
     if (st.status === "waiting") { endAnnounced = false; lastSeenSeq = 0; }
     renderGame(st);
     if (st.status === "ended" && !endAnnounced) { endAnnounced = true; showEndOverlay(st); }
+    maybeRunCpuTurn(st);
   });
 }
-function leaveRoom() { if (unsubscribe) unsubscribe(); unsubscribe = null; roomId = null; mySlot = null; clearSession(); const eo = document.getElementById("endOverlay"); if (eo) eo.remove(); renderLandingScreen(); }
+function leaveRoom() { if (unsubscribe) unsubscribe(); unsubscribe = null; roomId = null; mySlot = null; cpuThinking = false; clearSession(); const eo = document.getElementById("endOverlay"); if (eo) eo.remove(); renderLandingScreen(); }
 function confirmLeaveMidGame() { showModal(`<div class="big-text">退室しますか？</div><div style="font-size:12px;color:#f4b400;margin-bottom:10px;">対戦中でも自分の画面から抜けられます。</div><button class="danger" onclick="window.__leaveConfirmed()">退室する</button><button class="secondary" onclick="window.__closeModal()">キャンセル</button>`); }
 window.__leaveConfirmed = () => { closeModal(); leaveRoom(); };
 
 function renderGame(st) { if (st.status === "waiting") renderWaiting(st); else renderPlaying(st); }
 
 function renderWaiting(st) {
+  const waitLabel = st.vsCpu ? "CPU対戦の準備" : "対戦相手を待っています";
   app.innerHTML = `
     <div class="page-pad">
       <div class="duel-header"><div class="duel-title">トランプ人狼</div></div>
       <div class="room-id-card"><div class="room-id-label">ROOM ID</div><div class="room-id-value">${roomId}</div><button class="copy-btn" id="copyIdBtn">コピー</button></div>
       <div class="waiting-panel flat-section panel">
-        <div class="flat-label">対戦相手を待っています</div>
-        <div class="player-slot-row"><div class="player-slot ${st.players.A ? "ready" : ""}">A ${st.players.A ? "✓" : "…"}</div><div class="vs-mark">VS</div><div class="player-slot ${st.players.B ? "ready" : ""}">B ${st.players.B ? "✓" : "…"}</div></div>
+        <div class="flat-label">${waitLabel}</div>
+        <div class="player-slot-row"><div class="player-slot ${st.players.A ? "ready" : ""}">A ${st.players.A ? "✓" : "…"}</div><div class="vs-mark">VS</div><div class="player-slot ${st.players.B ? "ready" : ""}">${st.vsCpu ? "CPU" : "B"} ${st.players.B ? "✓" : "…"}</div></div>
       </div>
       <div class="settings-panel">
         <label>初期情報タイプ</label>
