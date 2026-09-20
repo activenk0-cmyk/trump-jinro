@@ -51,6 +51,16 @@ function setLastAction(st, actorSlot, description, cardKey, isRole) {
   st.turnSeq += 1;
   st.lastAction = { actorSlot, description, seq: st.turnSeq, cardKey: cardKey || null, isRole: !!isRole };
 }
+// ★追加：CPUの思考材料になる「行動履歴」を記録する。
+// ここでは st.wolf には一切触れず、誰でも見える情報（誰が・何を・強制下だったか・
+// その結果の脱出枚数）だけを積み上げていく。人間が対戦相手の動きを観察するのと同じ情報量。
+function addPlayHistory(st, entry) {
+  if (!st.playHistory) st.playHistory = [];
+  if (typeof st.historySeq !== "number") st.historySeq = 0;
+  st.historySeq += 1;
+  st.playHistory.push({ seq: st.historySeq, ...entry });
+  if (st.playHistory.length > 60) st.playHistory = st.playHistory.slice(-60);
+}
 function buildDeck() {
   const d = []; let id = 0;
   MARKS.forEach((mk) => { NUMBERS.forEach((n) => d.push({ id: String(id++), type: "citizen", mark: mk, number: n })); });
@@ -88,21 +98,31 @@ function reduceStartGame(st) {
   const handA = deck.splice(0, 3), handB = deck.splice(0, 3);
   const wolfMark = MARKS[Math.floor(Math.random() * MARKS.length)];
   const wolfNumber = NUMBERS[Math.floor(Math.random() * NUMBERS.length)];
-  let infoA, infoB;
-  if (st.settings.infoType === "確定") { infoA = `人狼のマークは「${wolfMark}」です。`; infoB = `人狼の数字は「${wolfNumber}」です。`; }
+  let infoA, infoB, cluesA, cluesB;
+  if (st.settings.infoType === "確定") {
+    infoA = `人狼のマークは「${wolfMark}」です。`; infoB = `人狼の数字は「${wolfNumber}」です。`;
+    // ★追加：表示用テキストと同じ内容を、CPUが読み取れる構造化データとしても保持
+    cluesA = { attr: "mark", mode: "confirmed", value: wolfMark };
+    cluesB = { attr: "number", mode: "confirmed", value: wolfNumber };
+  }
   else {
     const om = MARKS.filter((m) => m !== wolfMark), on = NUMBERS.filter((n) => n !== wolfNumber);
     const exM = om[Math.floor(Math.random() * om.length)], exN = on[Math.floor(Math.random() * on.length)];
     infoA = `人狼のマークは「${exM}」ではありません。`; infoB = `人狼の数字は「${exN}」ではありません。`;
+    cluesA = { attr: "mark", mode: "exclude", value: exM };
+    cluesB = { attr: "number", mode: "exclude", value: exN };
   }
   const fp = Math.random() < 0.5 ? "A" : "B", sp = fp === "A" ? "B" : "A";
   st.status = "playing"; st.wolf = { mark: wolfMark, number: wolfNumber };
   st.hands = { A: handA, B: handB }; st.drawPile = deck; st.table = { A: [], B: [] }; st.discard = [];
   st.costCards = { A: [], B: [] };
-  st.info = { A: infoA, B: infoB }; st.seerHistory = { A: [], B: [] }; st.seerRevealLog = { A: [], B: [] }; st.roleDiscard = { A: [], B: [] };
+  st.info = { A: infoA, B: infoB };
+  st.clues = { A: cluesA, B: cluesB }; // ★追加：CPU用の構造化ヒント（表示テキストのinfoとは別枠）
+  st.seerHistory = { A: [], B: [] }; st.seerRevealLog = { A: [], B: [] }; st.roleDiscard = { A: [], B: [] };
   st.constraints = { A: null, B: null }; st.firstPlayer = fp; st.costPool = { A: 0, B: 0 }; st.turnSeq = 0; st.lastAction = null;
   st.playerMeta = { A: { virtualCostUnused: sp === "A", mulliganUsed: false, hasDrawnYet: false }, B: { virtualCostUnused: sp === "B", mulliganUsed: false, hasDrawnYet: false } };
   st.currentTurn = fp; st.phase = "needDraw"; st.winner = null; st.reason = null;
+  st.playHistory = []; st.historySeq = 0; // ★追加：CPU用の行動履歴（毎ゲーム開始時にリセット）
   addLog(st, "ゲームを開始しました。先攻：プレイヤー" + fp);
   return st;
 }
@@ -128,6 +148,7 @@ function reducePlayCitizen(st, s, cardId) {
   const hand = st.hands[s]; const idx = hand.findIndex((c) => c.id === cardId);
   if (idx === -1) throw new GameActionError("指定されたカードが手札にありません。");
   const card = hand[idx]; if (card.type !== "citizen") throw new GameActionError("市民カードではありません。");
+  const constraintAtPlay = st.constraints[s]; // ★追加：行動時点の制約を履歴用に保持
   checkConstraintForCitizenPlay(st, s, card);
   hand.splice(idx, 1);
   const isWolf = card.mark === st.wolf.mark && card.number === st.wolf.number;
@@ -139,6 +160,15 @@ function reducePlayCitizen(st, s, cardId) {
     const esc = st.table[s].filter((c) => c.type === "citizen").length;
     if (esc >= st.settings.winCount) endGame(st, s, "市民脱出");
   }
+  // ★追加：CPUが「相手が任意で出したのか強制されたのか」「その時どれだけ切迫していたか」を
+  // 後から読み取れるように記録する
+  addPlayHistory(st, {
+    actor: s, type: "citizen", mark: card.mark, number: card.number,
+    wasConstrained: !!constraintAtPlay, constraintType: constraintAtPlay ? constraintAtPlay.type : null,
+    myEscapeCountAfter: st.table[s].filter((c) => c.type === "citizen").length,
+    oppEscapeCountAfter: st.table[opponent(s)].filter((c) => c.type === "citizen").length,
+    result: isWolf ? "wolf" : "safe",
+  });
   if (st.status === "playing") { setLastAction(st, s, card.mark + card.number, "c_" + card.mark + card.number, false); finishTurn(st, s); }
   return st;
 }
@@ -163,6 +193,13 @@ function reducePlayRole(st, s, cardId, opt = {}) {
       if (!opt.forceFacedownByBlock) throw new GameActionError("騎士の効果：手札に市民カードが無いため、この役職カードは効果を発動できません。裏向きで場に出します。", { kForcedFacedownAvailable: true });
       hand.splice(idx, 1); st.costCards[s].push({ type: "facedown" }); st.costPool[s] = (st.costPool[s] || 0) + 1;
       setLastAction(st, s, "役職カード（裏向き・騎士効果）", null, true); addLog(st, `${s}は騎士の効果により、役職カードしか手札になく、裏向きで場に出しました。`);
+      addPlayHistory(st, {
+        actor: s, type: "facedown", mark: null, number: null, roleType: null,
+        wasConstrained: true, constraintType: "blockRoles",
+        myEscapeCountAfter: st.table[s].filter((x) => x.type === "citizen").length,
+        oppEscapeCountAfter: st.table[opponent(s)].filter((x) => x.type === "citizen").length,
+        result: "facedown",
+      });
       finishTurn(st, s); return st;
     }
   }
@@ -174,6 +211,13 @@ function reducePlayRole(st, s, cardId, opt = {}) {
     if (opt.emergencySet && elig) {
       hand.splice(idx, 1); st.costCards[s].push({ type: "facedown" }); st.costPool[s] = (st.costPool[s] || 0) + 1;
       setLastAction(st, s, "役職カード（裏向き）", null, true); addLog(st, `${s}が緊急セットで役職カードを裏向きに出しました。`);
+      addPlayHistory(st, {
+        actor: s, type: "facedown", mark: null, number: null, roleType: null,
+        wasConstrained: !!c, constraintType: c ? c.type : null,
+        myEscapeCountAfter: st.table[s].filter((x) => x.type === "citizen").length,
+        oppEscapeCountAfter: st.table[opponent(s)].filter((x) => x.type === "citizen").length,
+        result: "facedown",
+      });
       finishTurn(st, s); return st;
     }
     throw new GameActionError("コストが足りません。", { emergencyAvailable: elig });
@@ -189,6 +233,21 @@ function reducePlayRole(st, s, cardId, opt = {}) {
   else if (card.type === "role" && card.role === "K") { st.constraints[opponent(s)] = { type: "blockRoles" }; addLog(st, `${s}が騎士を使用しました。相手は次のターン役職カードを出せません。`); desc = "騎士(K)"; }
   else if (card.type === "joker") { st.constraints[opponent(s)] = { type: "forceAccuse" }; addLog(st, `${s}がジョーカーを使用しました。相手は次のターン告発を強制されます。`); desc = "ジョーカー"; }
   setLastAction(st, s, desc, null, true);
+  // ★追加：CPUがJの占い結果履歴・Qの強制内容・K/ジョーカーの使用タイミングを後から参照できるように記録
+  addPlayHistory(st, {
+    actor: s,
+    type: card.type === "joker" ? "joker" : "role",
+    mark: card.type === "role" ? card.mark : null,
+    number: null,
+    roleType: card.type === "role" ? card.role : "JOKER",
+    qAttr: card.type === "role" && card.role === "Q" ? opt.attr : null,
+    qValue: card.type === "role" && card.role === "Q" ? opt.value : null,
+    seerValue: card.type === "role" && card.role === "J" ? seer.value : null,
+    wasConstrained: !!c, constraintType: c ? c.type : null,
+    myEscapeCountAfter: st.table[s].filter((x) => x.type === "citizen").length,
+    oppEscapeCountAfter: st.table[opponent(s)].filter((x) => x.type === "citizen").length,
+    result: "used",
+  });
   finishTurn(st, s);
   return st;
 }
@@ -201,6 +260,14 @@ function reduceAccuse(st, s, mark, number) {
   }
   const ok = mark === st.wolf.mark && Number(number) === st.wolf.number;
   if (ok) endGame(st, s, "告発成功"); else endGame(st, opponent(s), "告発失敗");
+  // ★追加：告発の成否・強制下だったかどうかをCPU用に記録
+  addPlayHistory(st, {
+    actor: s, type: "accuse", mark, number: Number(number),
+    wasConstrained: !!c, constraintType: c ? c.type : null,
+    myEscapeCountAfter: st.table[s].filter((x) => x.type === "citizen").length,
+    oppEscapeCountAfter: st.table[opponent(s)].filter((x) => x.type === "citizen").length,
+    result: ok ? "success" : "fail",
+  });
   st.constraints[s] = null; return st;
 }
 function reduceMulligan(st, s) {
@@ -213,9 +280,17 @@ function reduceMulligan(st, s) {
   const hand = st.hands[s];
   if (countCitizens(hand) > 0) throw new GameActionError("手札に市民カードがあるため、引き直しはできません。");
   const old = hand.map(cardLabel).join("、");
+  const revealedCards = hand.map((c) => ({ type: c.type, mark: c.mark || null, role: c.role || null })); // ★追加：公開された手札の内訳
   st.drawPile = st.drawPile.concat(hand); st.hands[s] = []; shuffleArr(st.drawPile);
   for (let i = 0; i < 3; i++) st.hands[s].push(st.drawPile.pop());
   meta.mulliganUsed = true; addLog(st, `プレイヤー${s}が手札（${old}）を公開して引き直しました。`);
+  addPlayHistory(st, {
+    actor: s, type: "mulligan", revealedCards,
+    wasConstrained: false, constraintType: null,
+    myEscapeCountAfter: st.table[s].filter((x) => x.type === "citizen").length,
+    oppEscapeCountAfter: st.table[opponent(s)].filter((x) => x.type === "citizen").length,
+    result: "mulligan",
+  });
   return st;
 }
 
