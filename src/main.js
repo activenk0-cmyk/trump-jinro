@@ -371,6 +371,7 @@ function startWatching() {
   if (unsubscribe) unsubscribe();
   unsubscribe = Game.subscribe(roomId, (st) => {
     if (!st) { clearSession(); renderLandingScreen(); showSimpleModal("ルームが見つかりませんでした。"); return; }
+    if (st.status === "waiting") { endAnnounced = false; lastSeenSeq = 0; }
     renderGame(st);
     if (st.status === "ended" && !endAnnounced) { endAnnounced = true; showEndOverlay(st); }
   });
