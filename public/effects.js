@@ -6,58 +6,35 @@
     const style = document.createElement("style");
     style.id = STYLE_ID;
     style.textContent = `
-      /* 市民カード：緑のほわほわオーラ（手札） */
+      /* 市民カード：緑のほわほわオーラ（手札）※少し暗め・少し控えめ */
       .hand-card.suit-black, .hand-card.suit-red {
         animation: tjAuraPulse 2.2s ease-in-out infinite;
       }
       @keyframes tjAuraPulse {
         0%, 100% {
           box-shadow: 0 2px 6px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.1),
-                      0 0 6px rgba(90,255,140,0.35);
+                      0 0 5px rgba(78,222,122,0.32);
         }
         50% {
           box-shadow: 0 2px 6px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.1),
-                      0 0 24px rgba(90,255,140,0.9), 0 0 42px rgba(90,255,140,0.35);
+                      0 0 21px rgba(78,222,122,0.8), 0 0 37px rgba(78,222,122,0.3);
         }
       }
 
-      /* 役職カード：手札にある時だけ、金の粒子が外側に広がる演出 */
-      .hand-card.role-frame {
+      /* 役職カード・ジョーカー：手札にある時だけ、黄色グローの明滅のみ（少し強め） */
+      .hand-card.role-frame, .hand-card.joker-frame {
         position: relative;
-        overflow: visible !important;
         animation: tjGoldGlow 2.2s ease-in-out infinite;
       }
       @keyframes tjGoldGlow {
         0%, 100% {
           box-shadow: 0 2px 6px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.1),
-                      0 0 6px rgba(255,215,0,0.35);
+                      0 0 7px rgba(255,215,0,0.4);
         }
         50% {
           box-shadow: 0 2px 6px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.1),
-                      0 0 22px rgba(255,215,0,0.85), 0 0 38px rgba(255,200,80,0.35);
+                      0 0 26px rgba(255,215,0,0.95), 0 0 44px rgba(255,200,80,0.4);
         }
-      }
-      .hand-card.role-frame::before {
-        content: "";
-        position: absolute;
-        inset: -14px;
-        border-radius: 50%;
-        pointer-events: none;
-        background:
-          radial-gradient(3px 3px at 50% 8%,  #ffe9a0 0%, rgba(255,233,160,0) 70%),
-          radial-gradient(3px 3px at 82% 22%, #ffd76a 0%, rgba(255,215,106,0) 70%),
-          radial-gradient(2.5px 2.5px at 88% 55%, #fff3c4 0%, rgba(255,243,196,0) 70%),
-          radial-gradient(3px 3px at 70% 85%, #ffe9a0 0%, rgba(255,233,160,0) 70%),
-          radial-gradient(2.5px 2.5px at 30% 88%, #ffd76a 0%, rgba(255,215,106,0) 70%),
-          radial-gradient(3px 3px at 12% 60%, #fff3c4 0%, rgba(255,243,196,0) 70%),
-          radial-gradient(2.5px 2.5px at 18% 25%, #ffe9a0 0%, rgba(255,233,160,0) 70%);
-        opacity: 0;
-        animation: tjGoldParticles 2.2s ease-out infinite;
-      }
-      @keyframes tjGoldParticles {
-        0%   { transform: scale(0.55); opacity: 0; }
-        35%  { opacity: 1; }
-        100% { transform: scale(1.35); opacity: 0; }
       }
 
       /* 場に置いた役職カードには演出なし（元のデザインのまま） */
