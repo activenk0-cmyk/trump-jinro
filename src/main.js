@@ -439,10 +439,12 @@ function renderPlaying(st) {
   const seerValues = st.seerHistory?.[mySlot] || [];
   const seerLabel = mySlot === "A" ? "安全な数字" : "安全なマーク";
 
-  let turnChipHtml;
-  if (isEnded) { const w = st.winner === mySlot; turnChipHtml = `<div class="chip turn-chip ${w ? "win-chip" : "lose-chip"}">${w ? "VICTORY" : "DEFEAT"}</div>`; }
+    let turnChipHtml;
+  if (isEnded) {
+    const w = st.winner === mySlot;
+    turnChipHtml = `<div class="chip turn-chip ${w ? "win-chip" : "lose-chip"}">${w ? "VICTORY" : "DEFEAT"}</div><div class="chip wolf-reveal-chip">人狼は${st.wolf.mark}${st.wolf.number}でした</div>`;
+  }
   else turnChipHtml = `<div class="chip turn-chip ${isMyTurn ? "my-turn" : "opp-turn"}">${isMyTurn ? "あなたのターン" : "相手のターン"}</div>`;
-
   const handHtml = (st.hands?.[mySlot] || []).map((c) => handCardHtml(c, isMyTurn && st.phase === "needAction")).join("");
   const mulliganAvailable = !isEnded && st.firstPlayer === mySlot && !st.playerMeta[mySlot].mulliganUsed && !st.playerMeta[mySlot].hasDrawnYet && countCitizens(st.hands[mySlot]) === 0 && st.currentTurn === mySlot;
   const handActionsHtml = isEnded
