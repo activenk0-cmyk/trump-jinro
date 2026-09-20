@@ -134,9 +134,7 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
 .card.suit-black { border-color: #b6bccf; }
 .card.suit-red   { border-color: #b6bccf; }
 .card.role-frame { border-color: #ffd700; box-shadow: 0 2px 8px rgba(0,0,0,.6), 0 0 12px rgba(255,215,0,.35), inset 0 0 0 1px rgba(255,255,255,.14); }
-@keyframes holoSpin { to { transform: rotate(360deg); } }
 .card.joker-frame { border: 2px solid #ffd700; }
-.card.joker-frame::after { content: ""; position: absolute; inset: -3px; border-radius: 10px; z-index: -1; background: conic-gradient(from 0deg, #b5546b, #c79a5a, #4a8f70, #3a6f9a, #7a4f9a, #b5546b); animation: holoSpin 4s linear infinite; opacity: 0.9; }
 .card-back { background: repeating-linear-gradient(45deg, #1b1440 0 10px, #241b55 10px 20px); }
 .card-back::after { content: ""; position: absolute; top: 30%; left: 30%; width: 40%; height: 40%; border-radius: 50%; border: 2px solid rgba(255,215,0,0.5); box-shadow: 0 0 8px rgba(255,215,0,0.4), inset 0 0 6px rgba(255,215,0,0.3); }
 .card.card-back { border-color: #6a5a9f; }
