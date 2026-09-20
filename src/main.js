@@ -109,6 +109,9 @@ function reduceStartGame(st) {
 function reduceResetRoom(st) { const ns = { status: "waiting", players: st.players, settings: st.settings, log: st.log || [] }; addLog(ns, "同じルームで新しいゲームの準備を始めました。"); return ns; }
 function reduceDraw(st, s) {
   validateTurnAction(st, s, "needDraw");
+  const meta = st.playerMeta[s];
+  const forcedMulligan = st.firstPlayer === s && !meta.mulliganUsed && !meta.hasDrawnYet && countCitizens(st.hands[s]) === 0;
+  if (forcedMulligan) throw new GameActionError("手札に市民カードがないため、まず引き直しを行う必要があります。");
   if (st.drawPile.length > 0) st.hands[s].push(st.drawPile.pop()); else addLog(st, "山札が尽きているため、" + s + "は引けませんでした。");
   st.playerMeta[s].hasDrawnYet = true; st.phase = "needAction"; return st;
 }
