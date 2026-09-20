@@ -186,6 +186,7 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
 .chip.turn-chip.opp-turn { border-color: #7a5fff; color: #cfc7ff; box-shadow: 0 0 10px rgba(122,95,255,.3); }
 .chip.turn-chip.win-chip { border-color: #7ad0a2; color: #b6f0d0; }
 .chip.turn-chip.lose-chip { border-color: #cf7a86; color: #f0b6bc; }
+.chip.wolf-reveal-chip { border-color: #ffd700; color: #fff3c4; font-weight: 900; box-shadow: 0 0 10px rgba(255,215,0,.35); }
 @keyframes goldPulse { 0%,100% { box-shadow: 0 0 10px rgba(255,215,0,.4); } 50% { box-shadow: 0 0 22px rgba(255,215,0,.8); } }
 .cost-line { display: flex; justify-content: center; gap: 14px; font-size: 11px; font-weight: 800; }
 .cost-line .cost-mine { color: #fff3c4; text-shadow: 0 1px 2px rgba(0,0,0,.7); }
