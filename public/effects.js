@@ -58,16 +58,23 @@
     document.head.appendChild(style);
   }
 
-  // 自分の市民カード列を見て「あと1枠で勝利」を検出する
-  function applyReachEffect() {
-    document.querySelectorAll(".field-slot.tj-reach").forEach((el) => el.classList.remove("tj-reach"));
-    const row = document.querySelector(".zone-my-field .slot-row:first-child");
+  // 市民カードが並ぶ行を1つ受け取り、「あと1枠で勝利」なら光らせる
+  function applyReachToRow(row) {
     if (!row) return;
     const slots = Array.from(row.children);
     const emptySlots = slots.filter((el) => el.classList.contains("field-slot") && el.classList.contains("empty"));
     if (emptySlots.length === 1) {
       emptySlots[0].classList.add("tj-reach");
     }
+  }
+
+  // 自分・相手、両方の市民カード列を見て「あと1枠で勝利」を検出する
+  function applyReachEffect() {
+    document.querySelectorAll(".field-slot.tj-reach").forEach((el) => el.classList.remove("tj-reach"));
+    // 自分の場：1行目が市民カード列
+    applyReachToRow(document.querySelector(".zone-my-field .slot-row:first-child"));
+    // 相手の場：2行目（役職列の次）が市民カード列
+    applyReachToRow(document.querySelector(".zone-opp-field .slot-row:last-child"));
   }
 
   let scheduled = false;
