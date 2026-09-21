@@ -97,7 +97,7 @@ function reduceStartGame(st) {
   else {
     const om = MARKS.filter((m) => m !== wolfMark), on = NUMBERS.filter((n) => n !== wolfNumber);
     const exM = om[Math.floor(Math.random() * om.length)], exN = on[Math.floor(Math.random() * on.length)];
-    infoA = `人狼のマークは「${exM}」ではありません。`; infoB = `人狼の数字は「${exN}」ではありません。`;
+    infoA = `人狼のマークは「${exM}」ではありません`; infoB = `人狼の数字は「${exN}」ではありません`;
     cluesA = { attr: "mark", mode: "exclude", value: exM };
     cluesB = { attr: "number", mode: "exclude", value: exN };
   }
