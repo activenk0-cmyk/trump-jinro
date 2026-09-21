@@ -428,7 +428,7 @@ function playSummonEffect(btn) {
   setTimeout(() => {
     const appEl = document.getElementById("app");
     if (appEl) {
-      const k = IS_IOS ? 1.8 : 1;
+      const k = IS_IOS ? 1.4 : 1;
       const p = (x, y) => ({ transform: `translate(${x * k}px, ${y * k}px) translateZ(0)` });
       appEl.animate([
         p(0, 0), p(-8, 5), p(8, -5), p(-6, -6), p(6, 6), p(-3, 2), p(0, 0)
