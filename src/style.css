@@ -264,6 +264,7 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
 .card.summon-anim { animation: summonDrop 0.42s cubic-bezier(0.7, 0, 0.84, 0) both; z-index: 30; }
 @keyframes camShake { 0%,100% { transform: translate(0,0); } 20% { transform: translate(-3px, 2px); } 40% { transform: translate(3px, -2px); } 60% { transform: translate(-2px, -3px); } 80% { transform: translate(2px, 3px); } }
 .board-screen.shake { animation: camShake 0.15s linear 1; }
+#app.shake { animation: camShake 0.15s linear 1; }
 .spark-layer { position: fixed; inset: 0; z-index: 55; pointer-events: none; overflow: hidden; }
 .spark { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: radial-gradient(circle, #fff 0%, #ffe9a0 45%, rgba(255,200,80,0) 75%); mix-blend-mode: screen; opacity: 1; will-change: transform, opacity; }
 
