@@ -379,7 +379,7 @@ function handCardHtml(card, canAct) {
 function renderFieldRow(cards, minSlots) {
   const items = cards.map((c) => {
     const key = c.type === "citizen" ? "c_" + c.mark + c.number : "";
-    return cardVisualHtml(c, { extraClass: "field-card", field: true }).replace("<button ", `<button data-cardkey="${key}" `);
+    return cardVisualHtml(c, { extraClass: "field-card", field: true, disabled: false }).replace("<button ", `<button data-cardkey="${key}" `);
   });
   const total = Math.max(minSlots, items.length);
   while (items.length < total) items.push(`<div class="field-slot empty"></div>`);
