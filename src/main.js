@@ -428,12 +428,12 @@ function playSummonEffect(btn) {
   const trigger = () => {
     if (done) return;
     done = true;
-    const board = document.querySelector(".board-screen");
-    if (board) { board.classList.add("shake"); setTimeout(() => board.classList.remove("shake"), 160); }
+    document.getElementById("app").classList.add("shake");
+    setTimeout(() => { const a = document.getElementById("app"); if (a) a.classList.remove("shake"); }, 160);
     spawnSparks(rect);
   };
   btn.addEventListener("animationend", trigger, { once: true });
-  setTimeout(trigger, 450); // Safariで要素が再描画で消えてもここで必ず発動する保険
+  setTimeout(trigger, 450);
 }
 function spawnSparks(rect) {
   const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
