@@ -523,7 +523,7 @@ function renderWaiting(st) {
       </div>
       <div class="settings-panel">
         <button class="lobby-btn btn-create" id="startBtn" ${!(st.players.A && st.players.B) ? "disabled" : ""}>ゲーム開始</button>
-        <button class="danger" id="leaveBtn">退室する</button>
+        <button class="btn-neutral" id="leaveBtn">退室する</button>
       </div>
     </div>${modalOverlayHtml}`;
   document.getElementById("copyIdBtn").onclick = () => { navigator.clipboard.writeText(roomId).then(() => { const b = document.getElementById("copyIdBtn"); b.textContent = "✓ コピー済"; setTimeout(() => (b.textContent = "コピー"), 1500); }); };
