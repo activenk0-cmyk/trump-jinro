@@ -6,12 +6,12 @@
 
 html { height: 100%; background-color: #0a0818; }
 body {
-  font-family: "Noto Sans JP", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  font-family: "Cinzel", "Noto Serif JP", serif;
   margin: 0; padding: 0; color: #eee; min-height: 100vh; height: 100%;
   position: relative; overflow-x: hidden;
   background: url('/bg.jpg') center/cover no-repeat fixed;
 }
-h1, h2, h3 { font-family: "Cinzel", "Noto Sans JP", serif; }
+h1, h2, h3 { font-family: "Cinzel", "Noto Serif JP", serif; }
 
 /* ===================== 共通ボタン ===================== */
 button {
@@ -64,7 +64,7 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
 
 /* サブタイトル (64行目付近) */
 .landing-sub {
-  font-family: "Cinzel", serif; font-size: 12px; letter-spacing: 0.4em; margin: 12px 0 34px;
+  font-family: "Cinzel", "Noto Serif JP", serif; font-size: 12px; letter-spacing: 0.4em; margin: 12px 0 34px;
   /* シルバー系の文字色と光彩に変更 */
   color: #d3d3d3;
   text-shadow: 0 1px 3px rgba(0,0,0,0.8), 0 0 10px rgba(200,200,200,0.35);
@@ -127,7 +127,7 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
 .page-pad { padding: 20px 16px; height: 100dvh; max-height: 100dvh; overflow-y: auto; }
 .duel-header { text-align: center; margin-bottom: 14px; }
 .duel-title {
-  font-family: "Cinzel", serif; font-size: 24px; font-weight: 900; letter-spacing: 0.03em;
+  font-family: "Cinzel", "Noto Serif JP", serif; font-size: 24px; font-weight: 900; letter-spacing: 0.03em;
   /* シルバーのグラデーションに変更 */
   background: linear-gradient(175deg, #ffffff, #d3d3d3 40%, #808080 70%, #f5f5f5);
   -webkit-background-clip: text; background-clip: text; color: transparent;
@@ -136,12 +136,12 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
 }
 .room-id-card { background: linear-gradient(160deg, rgba(106,47,184,0.28), rgba(58,22,96,0.16)); border: 1px solid rgba(255,215,0,0.42); border-radius: 16px; padding: 16px; text-align: center; margin-bottom: 16px; box-shadow: 0 0 26px rgba(106,47,184,0.3), inset 0 1px 0 rgba(255,255,255,0.08); }
 .room-id-label { font-size: 11px; letter-spacing: 0.3em; color: #d8c4ff; margin-bottom: 4px; }
-.room-id-value { font-family: "Cinzel", monospace; font-size: 32px; font-weight: 900; letter-spacing: 0.14em; color: #ffe066; text-shadow: 0 0 18px rgba(255,224,102,0.65); margin-bottom: 10px; }
+.room-id-value { font-family: "Cinzel", "Noto Serif JP", serif; font-size: 32px; font-weight: 900; letter-spacing: 0.14em; color: #ffe066; text-shadow: 0 0 18px rgba(255,224,102,0.65); margin-bottom: 10px; }
 .copy-btn { background: linear-gradient(160deg, #3a3768, #211d3e); border: 1px solid rgba(255,255,255,0.2); }
 .player-slot-row { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 10px; }
 .player-slot { flex: 1; text-align: center; padding: 15px 6px; border-radius: 12px; font-weight: 800; background: rgba(255,255,255,0.04); border: 1px dashed rgba(255,255,255,0.2); color: #aaa; }
 .player-slot.ready { border: 1px solid #7ad0a2; color: #b6f0d0; background: rgba(60,150,110,0.14); box-shadow: 0 0 16px rgba(60,150,110,0.3); }
-.vs-mark { font-family: "Cinzel", serif; font-weight: 900; color: #d68a4a; font-size: 15px; text-shadow: 0 0 10px rgba(200,120,60,0.6); }
+.vs-mark { font-family: "Cinzel", "Noto Serif JP", serif; font-weight: 900; color: #d68a4a; font-size: 15px; text-shadow: 0 0 10px rgba(200,120,60,0.6); }
 .settings-panel { background: linear-gradient(160deg, rgba(30,24,60,0.75), rgba(15,12,30,0.82)); padding: 16px; border-radius: 14px; border: 1px solid rgba(255,215,0,0.2); box-shadow: 0 6px 18px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.05); }
 .settings-panel button { margin-top: 8px; width: 100%; }
 .settings-panel .lobby-btn { margin-top: 10px; padding: 15px; }
@@ -211,7 +211,7 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
 .zone-center { flex: 0 0 auto; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 4px 0; }
 .center-top-grid { display: grid; grid-template-columns: 48px 1fr 48px; align-items: center; gap: 8px; }
 .side-icon-col { display: flex; align-items: center; justify-content: center; }
-.center-log-btn { width: 44px; height: 44px; border-radius: 10px; font-family: "Cinzel", serif; font-size: 13px; font-weight: 900; letter-spacing: 0.12em; color: #d8c4ff; display: flex; align-items: center; justify-content: center; background: linear-gradient(160deg, #3a3768, #211d3e); border: 1px solid rgba(255,255,255,0.14); text-shadow: 0 1px 2px rgba(0,0,0,0.7); }
+.center-log-btn { width: 44px; height: 44px; border-radius: 10px; font-family: "Cinzel", "Noto Serif JP", serif; font-size: 13px; font-weight: 900; letter-spacing: 0.12em; color: #d8c4ff; display: flex; align-items: center; justify-content: center; background: linear-gradient(160deg, #3a3768, #211d3e); border: 1px solid rgba(255,255,255,0.14); text-shadow: 0 1px 2px rgba(0,0,0,0.7); }
 .deck-pile { width: 44px; aspect-ratio: 10/9; border-radius: 8px; background: linear-gradient(160deg, #2f2058, #170f30); border: 1px solid rgba(255,215,0,0.35); display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.6), inset 0 0 12px rgba(120,80,200,0.35); position: relative; }
 .deck-pile::before { content: ""; position: absolute; inset: 3px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.12); }
 .deck-pile-label { font-size: 9px; color: #ede0ff; text-shadow: 0 1px 2px rgba(0,0,0,.8); letter-spacing: 0.05em; }
@@ -258,7 +258,7 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
   margin: 0 auto 2px;
 }
 .mana-label {
-  font-family: "Cinzel", serif;
+  font-family: "Cinzel", "Noto Serif JP", serif;
   font-size: 10px;
   font-weight: 900;
   letter-spacing: 0.22em;
@@ -310,7 +310,7 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
 .end-overlay { position: fixed; inset: 0; z-index: 280; display: flex; align-items: center; justify-content: center; background: rgba(4,2,12,0); opacity: 0; pointer-events: none; transition: opacity 0.35s ease, background 0.35s ease; padding: 20px; }
 .end-overlay.show { opacity: 1; pointer-events: auto; background: rgba(4,2,12,0.88); }
 .end-overlay-inner { text-align: center; max-width: 320px; }
-.end-overlay-title { font-family: "Cinzel", serif; font-size: 44px; font-weight: 900; letter-spacing: 0.08em; margin-bottom: 14px; }
+.end-overlay-title { font-family: "Cinzel", "Noto Serif JP", serif; font-size: 44px; font-weight: 900; letter-spacing: 0.08em; margin-bottom: 14px; }
 .end-overlay-title.victory { color: #ffd700; text-shadow: 0 0 30px rgba(255,215,0,0.8), 0 0 60px rgba(255,215,0,0.4); }
 .end-overlay-title.defeat { color: #cf7a86; text-shadow: 0 0 30px rgba(200,100,120,0.7); }
 .end-overlay-sub { font-size: 13px; color: #d8c4ff; margin-bottom: 20px; text-shadow: 0 1px 3px rgba(0,0,0,.7); }
