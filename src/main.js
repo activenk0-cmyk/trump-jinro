@@ -422,16 +422,20 @@ function showEndOverlay(st) {
 
 function playSummonEffect(btn) {
   if (!btn) return;
+  const rect = btn.getBoundingClientRect();
   btn.classList.add("summon-anim");
-  btn.addEventListener("animationend", () => {
-    btn.classList.remove("summon-anim");
+  let done = false;
+  const trigger = () => {
+    if (done) return;
+    done = true;
     const board = document.querySelector(".board-screen");
     if (board) { board.classList.add("shake"); setTimeout(() => board.classList.remove("shake"), 160); }
-    spawnSparks(btn);
-  }, { once: true });
+    spawnSparks(rect);
+  };
+  btn.addEventListener("animationend", trigger, { once: true });
+  setTimeout(trigger, 450); // Safariで要素が再描画で消えてもここで必ず発動する保険
 }
-function spawnSparks(btn) {
-  const rect = btn.getBoundingClientRect();
+function spawnSparks(rect) {
   const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
   const layer = document.createElement("div"); layer.className = "spark-layer"; document.body.appendChild(layer);
   for (let i = 0; i < 60; i++) {
