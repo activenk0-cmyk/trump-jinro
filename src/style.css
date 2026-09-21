@@ -44,13 +44,15 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
 }
 .landing-emblem-wrap { position: relative; margin-bottom: 10px; }
 .landing-title {
-  font-family: "Cinzel", "Noto Sans JP", serif;
-  font-size: 40px; font-weight: 900; letter-spacing: 0.04em; margin: 0; line-height: 1.1;
-  /* シルバーのグラデーションに変更 */
-  background: linear-gradient(175deg, #ffffff 0%, #d3d3d3 30%, #808080 55%, #f5f5f5 80%, #696969 100%);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-  /* 黄色の光彩をシルバー系(200,200,200)に変更 */
-  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.9)) drop-shadow(0 0 18px rgba(200,200,200,0.35));
+  font-family: "Cinzel", "Noto Serif JP", serif;
+  font-size: 40px; font-weight: 900; letter-spacing: 0.15em; margin: 0; line-height: 1.15;
+  color: #f0f0f8;
+  text-shadow:
+    0 3px 4px rgba(0,0,0,0.85),
+    0 0 8px rgba(154,116,255,0.55),
+    0 0 20px rgba(122,95,255,0.55),
+    0 0 38px rgba(106,47,184,0.45),
+    0 0 60px rgba(90,40,170,0.3);
 }
 /* タイトル下の下線 (63行目付近) */
 .landing-title-underline {
