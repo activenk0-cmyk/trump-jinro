@@ -160,6 +160,12 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
 .sheet-handle { width: 36px; height: 4px; background: #666; border-radius: 4px; margin: 0 auto 14px; }
 .log-box { max-height: 50vh; overflow-y: auto; background: rgba(8,6,20,0.65); border-radius: 10px; padding: 9px; font-size: 12px; color: #b6aee0; border: 1px solid rgba(255,255,255,0.06); }
 .log-box div { margin-bottom: 4px; }
+button.btn-neutral {
+  background: linear-gradient(160deg, #5c5c68, #303038);
+  border: 1px solid rgba(200,200,210,0.35);
+  color: #e8e6f0;
+  box-shadow: 0 3px 0 rgba(0,0,0,.4), 0 5px 12px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.12);
+}
 
 /* ===================== カード共通 ===================== */
 .card {
