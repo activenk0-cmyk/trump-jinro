@@ -420,30 +420,22 @@ function showEndOverlay(st) {
   document.getElementById("endOverlayCloseBtn").onclick = () => { el.classList.remove("show"); setTimeout(() => el.remove(), 350); };
 }
 
+const IS_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 function playSummonEffect(btn) {
   if (!btn) return;
   const rect = btn.getBoundingClientRect();
   btn.classList.add("summon-anim");
-  let done = false;
-  const trigger = () => {
-    if (done) return;
-    done = true;
+  setTimeout(() => {
     const appEl = document.getElementById("app");
     if (appEl) {
+      const k = IS_IOS ? 1.8 : 1;
+      const p = (x, y) => ({ transform: `translate(${x * k}px, ${y * k}px) translateZ(0)` });
       appEl.animate([
-        { transform: "translate(0, 0)" },
-        { transform: "translate(-8px, 5px)" },
-        { transform: "translate(8px, -5px)" },
-        { transform: "translate(-6px, -6px)" },
-        { transform: "translate(6px, 6px)" },
-        { transform: "translate(-3px, 2px)" },
-        { transform: "translate(0, 0)" }
-      ], { duration: 320, easing: "ease-out" });
+        p(0, 0), p(-8, 5), p(8, -5), p(-6, -6), p(6, 6), p(-3, 2), p(0, 0)
+      ], { duration: IS_IOS ? 380 : 320, easing: "ease-out" });
     }
     spawnSparks(rect);
-  };
-  btn.addEventListener("animationend", trigger, { once: true });
-  setTimeout(trigger, 450);
+  }, 400);
 }
 function spawnSparks(rect) {
   const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
