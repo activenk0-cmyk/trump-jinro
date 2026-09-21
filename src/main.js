@@ -6,8 +6,6 @@ import { decideCpuAction } from "./cpuAi.js";
 const MARKS = ["♠", "♥", "♣", "♦"];
 const NUMBERS = [1, 2, 3, 4];
 const RED_MARKS = ["♥", "♦"];
-const WIN_COUNT_OPTIONS = [3, 4, 5, 6, 7];
-const JOKER_COST_OPTIONS = [1, 2, 3, 4];
 const SESSION_KEY = "trump_jinro_session";
 
 const SPRITE_SUIT_ORDER = ["♣", "♦", "♥", "♠"];
@@ -83,12 +81,6 @@ function reduceJoin(st, s) {
   else if (!st.players[s]) throw new GameActionError("このルームは既にゲームが開始されているため、新規参加できません。");
   return st;
 }
-function reduceUpdateSettings(st, s, it, wc, jc) {
-  if (st.status !== "waiting") throw new GameActionError("ゲーム開始後は設定を変更できません。");
-  st.settings = { infoType: it, winCount: Number(wc), jokerCost: Number(jc) };
-  addLog(st, `設定が更新されました（初期情報:${it} / 勝利枚数:${wc} / ジョーカーコスト:${jc}）`);
-  return st;
-}
 function reduceStartGame(st) {
   if (st.status !== "waiting") throw new GameActionError("既にゲームが開始されています。");
   if (!st.players.A || !st.players.B) throw new GameActionError("両方のプレイヤーの入室を待っています。");
@@ -123,7 +115,12 @@ function reduceStartGame(st) {
   addLog(st, "ゲームを開始しました。先攻：プレイヤー" + fp);
   return st;
 }
-function reduceResetRoom(st) { const ns = { status: "waiting", players: st.players, settings: st.settings, log: st.log || [], vsCpu: st.vsCpu || false }; addLog(ns, "同じルームで新しいゲームの準備を始めました。"); return ns; }
+function reduceRematch(st) {
+  if (st.status !== "ended") throw new GameActionError("ゲームがまだ終了していません。");
+  const base = { status: "waiting", players: st.players, settings: st.settings, log: st.log || [], vsCpu: st.vsCpu || false };
+  addLog(base, "同じルームで再戦を開始しました。");
+  return reduceStartGame(base);
+}
 function reduceDraw(st, s) {
   validateTurnAction(st, s, "needDraw");
   const meta = st.playerMeta[s];
@@ -312,9 +309,8 @@ const Game = {
     return { id, state: st };
   },
   joinExisting: async (i) => { const id = normalizeRoomId(i); const snap = await getDoc(roomRef(id)); if (!snap.exists()) throw new GameActionError("そのルームIDが見つかりません。IDを確認してください。"); const st = await runAction(id, (s) => reduceJoin(s, "B")); return { id, state: st }; },
-  updateSettings: (r, s, i, w, j) => runAction(r, (st) => reduceUpdateSettings(st, s, i, w, j)),
   start: (r) => runAction(r, (s) => reduceStartGame(s)),
-  reset: (r) => runAction(r, (s) => reduceResetRoom(s)),
+  rematch: (r) => runAction(r, (st) => reduceRematch(st)),
   draw: (r, s) => runAction(r, (st) => reduceDraw(st, s)),
   playCitizen: (r, s, c) => runAction(r, (st) => reducePlayCitizen(st, s, c)),
   playRole: (r, s, c, o) => runAction(r, (st) => reducePlayRole(st, s, c, o)),
@@ -526,21 +522,13 @@ function renderWaiting(st) {
         <div class="player-slot-row"><div class="player-slot ${st.players.A ? "ready" : ""}">A ${st.players.A ? "✓" : "…"}</div><div class="vs-mark">VS</div><div class="player-slot ${st.players.B ? "ready" : ""}">${st.vsCpu ? "CPU" : "B"} ${st.players.B ? "✓" : "…"}</div></div>
       </div>
       <div class="settings-panel">
-        <label>初期情報タイプ</label>
-        <select id="infoTypeSelect"><option value="除外" ${st.settings.infoType === "除外" ? "selected" : ""}>除外（〇ではない）</option><option value="確定" ${st.settings.infoType === "確定" ? "selected" : ""}>確定（〇である）</option></select>
-        <label>勝利条件の枚数（3〜7枚）</label>
-        <select id="winCountSelect">${WIN_COUNT_OPTIONS.map((n) => `<option value="${n}" ${st.settings.winCount === n ? "selected" : ""}>${n}枚</option>`).join("")}</select>
-        <label>ジョーカーの使用コスト（1〜4）</label>
-        <select id="jokerCostSelect">${JOKER_COST_OPTIONS.map((n) => `<option value="${n}" ${st.settings.jokerCost === n ? "selected" : ""}>コスト${n}</option>`).join("")}</select>
-        <button class="secondary" id="saveSettingsBtn">設定を保存</button>
         <button class="lobby-btn btn-create" id="startBtn" ${!(st.players.A && st.players.B) ? "disabled" : ""}>ゲーム開始</button>
         <button class="danger" id="leaveBtn">退室する</button>
       </div>
     </div>${modalOverlayHtml}`;
   document.getElementById("copyIdBtn").onclick = () => { navigator.clipboard.writeText(roomId).then(() => { const b = document.getElementById("copyIdBtn"); b.textContent = "✓ コピー済"; setTimeout(() => (b.textContent = "コピー"), 1500); }); };
-  document.getElementById("saveSettingsBtn").onclick = async () => { try { await Game.updateSettings(roomId, mySlot, document.getElementById("infoTypeSelect").value, document.getElementById("winCountSelect").value, document.getElementById("jokerCostSelect").value); showSimpleModal("設定を保存しました。"); } catch (e) { showError(e); } };
   document.getElementById("startBtn").onclick = async () => { try { lastSeenSeq = 0; endAnnounced = false; await Game.start(roomId); } catch (e) { showError(e); } };
-  document.getElementById("leaveBtn").onclick = leaveRoom;
+        document.getElementById("leaveBtn").onclick = leaveRoom;
 }
 
 function renderPlaying(st) {
@@ -665,7 +653,7 @@ const handActionsHtml = isEnded
   const accuseFab = document.getElementById("accuseFab"); if (accuseFab) accuseFab.onclick = openSheet;
   const cancelAccuse = document.getElementById("cancelAccuse"); if (cancelAccuse) cancelAccuse.onclick = closeSheet;
   const submitAccuse = document.getElementById("submitAccuse"); if (submitAccuse) submitAccuse.onclick = () => { const m = document.getElementById("accuseMark").value, n = document.getElementById("accuseNumber").value; closeSheet(); showModal(`<div>人狼は「${m}の${n}」だと告発しますか？<br><span style="color:#f4b400;font-size:13px;">外すと即敗北です</span></div><button class="danger" onclick="window.__accuse('${m}', ${n})">告発する</button><button class="secondary" onclick="window.__closeModal()">キャンセル</button>`); };
-  const rematchBtn = document.getElementById("rematchBtn"); if (rematchBtn) rematchBtn.onclick = () => { lastSeenSeq = 0; endAnnounced = false; const eo = document.getElementById("endOverlay"); if (eo) eo.remove(); Game.reset(roomId).catch(showError); };
+  const rematchBtn = document.getElementById("rematchBtn"); if (rematchBtn) rematchBtn.onclick = () => { lastSeenSeq = 0; endAnnounced = false; const eo = document.getElementById("endOverlay"); if (eo) eo.remove(); Game.rematch(roomId).catch(showError); };
   const leaveBtn2 = document.getElementById("leaveBtn2"); if (leaveBtn2) leaveBtn2.onclick = leaveRoom;
 
   maybeAnnounceTurn(st);
