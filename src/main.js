@@ -458,25 +458,38 @@ function spawnSparks(rect) {
   setTimeout(() => layer.remove(), 1100);
 }
 
-function renderLandingScreen() {
+function renderLandingScreen(stage = "menu") {
+  const menuButtonsHtml = `
+    <div class="landing-buttons">
+      <button class="lobby-btn btn-room" id="showRoomMenuBtn">ルームマッチ</button>
+      <button class="lobby-btn btn-cpu" id="createCpuRoomBtn">CPUマッチ</button>
+    </div>`;
+  const roomButtonsHtml = `
+    <div class="landing-buttons">
+      <button class="lobby-btn btn-create" id="createRoomBtn">部屋を作る</button>
+      <button class="lobby-btn btn-join" id="showJoinFormBtn">部屋に入る</button>
+      <button class="lobby-btn btn-back" id="backToMenuBtn">選択画面に戻る</button>
+    </div>
+    <div class="join-form" id="joinForm" style="display:none;">
+      <label>ルームID</label><input type="text" id="joinIdInput" placeholder="例：AB3XQ9" maxlength="6" />
+      <button class="lobby-btn btn-join" id="submitJoinBtn">入室する</button>
+    </div>`;
   app.innerHTML = `
     <div class="landing-screen">
       <div class="landing-emblem-wrap"><h1 class="landing-title">トランプ人狼</h1><div class="landing-title-underline"></div></div>
       <div class="landing-sub">DUAL BLIND DUEL</div>
-      <div class="landing-buttons">
-        <button class="lobby-btn btn-create" id="createRoomBtn">部屋を作る</button>
-        <button class="lobby-btn btn-join" id="showJoinFormBtn">部屋に入る</button>
-        <button class="lobby-btn btn-create" id="createCpuRoomBtn">CPUと対戦</button>
-      </div>
-      <div class="join-form" id="joinForm" style="display:none;">
-        <label>ルームID</label><input type="text" id="joinIdInput" placeholder="例：AB3XQ9" maxlength="6" />
-        <button class="lobby-btn btn-join" id="submitJoinBtn">入室する</button>
-      </div>
+      ${stage === "room" ? roomButtonsHtml : menuButtonsHtml}
     </div>${modalOverlayHtml}`;
-  document.getElementById("createRoomBtn").onclick = handleCreateRoom;
-  document.getElementById("createCpuRoomBtn").onclick = handleCreateCpuRoom;
-  document.getElementById("showJoinFormBtn").onclick = () => { document.getElementById("joinForm").style.display = "block"; document.getElementById("joinIdInput").focus(); };
-  document.getElementById("submitJoinBtn").onclick = handleJoinRoomSubmit;
+
+  if (stage === "room") {
+    document.getElementById("createRoomBtn").onclick = handleCreateRoom;
+    document.getElementById("showJoinFormBtn").onclick = () => { document.getElementById("joinForm").style.display = "block"; document.getElementById("joinIdInput").focus(); };
+    document.getElementById("submitJoinBtn").onclick = handleJoinRoomSubmit;
+    document.getElementById("backToMenuBtn").onclick = () => renderLandingScreen("menu");
+  } else {
+    document.getElementById("showRoomMenuBtn").onclick = () => renderLandingScreen("room");
+    document.getElementById("createCpuRoomBtn").onclick = handleCreateCpuRoom;
+  }
 }
 function renderLoading() { app.innerHTML = `<div class="landing-screen"><div class="loading-text">読み込み中...</div></div>${modalOverlayHtml}`; }
 async function handleCreateRoom() { try { const { id } = await Game.createRoom(false); roomId = id; mySlot = "A"; saveSession(); lastSeenSeq = 0; endAnnounced = false; startWatching(); } catch (e) { showError(e); } }
