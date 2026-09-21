@@ -76,11 +76,41 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
   text-shadow: 0 1px 3px rgba(0,0,0,0.85); transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
 }
 .lobby-btn::after { content: ""; position: absolute; inset: -2px; border-radius: 14px; z-index: -1; background: linear-gradient(160deg, #f0d98a, #b8860b 45%, #7a5a16 70%, #f0d98a); }
-.lobby-btn.btn-create { background: linear-gradient(160deg, #a3233f, #5e0f22); box-shadow: 0 6px 0 rgba(0,0,0,0.4), 0 8px 20px rgba(120,20,40,0.5); }
-.lobby-btn.btn-join { background: linear-gradient(160deg, #1f5fa8, #123a63); box-shadow: 0 6px 0 rgba(0,0,0,0.4), 0 8px 20px rgba(20,70,150,0.5); }
+
+/* ルームマッチ：アンティークゴールド／ブロンズ */
+.lobby-btn.btn-room {
+  background: linear-gradient(160deg, #8a6a2c 0%, #5c4419 55%, #2e2109 100%);
+  box-shadow: 0 6px 0 rgba(0,0,0,0.45), 0 9px 22px rgba(140,100,30,0.45), inset 0 1px 0 rgba(255,235,180,0.25), inset 0 -3px 7px rgba(0,0,0,0.4);
+}
+/* CPUマッチ：ディープエメラルド */
+.lobby-btn.btn-cpu {
+  background: linear-gradient(160deg, #1f8a5a 0%, #0f4a30 55%, #082a1c 100%);
+  box-shadow: 0 6px 0 rgba(0,0,0,0.45), 0 9px 22px rgba(20,120,80,0.4), inset 0 1px 0 rgba(200,255,225,0.2), inset 0 -3px 7px rgba(0,0,0,0.4);
+}
+/* 部屋を作る：ワインレッド */
+.lobby-btn.btn-create {
+  background: linear-gradient(160deg, #b8324f 0%, #7c1a32 55%, #430a1a 100%);
+  box-shadow: 0 6px 0 rgba(0,0,0,0.45), 0 9px 22px rgba(120,20,40,0.5), inset 0 1px 0 rgba(255,210,220,0.2), inset 0 -3px 7px rgba(0,0,0,0.4);
+}
+/* 部屋に入る：サファイアブルー */
+.lobby-btn.btn-join {
+  background: linear-gradient(160deg, #2a78c9 0%, #164a7c 55%, #0a2340 100%);
+  box-shadow: 0 6px 0 rgba(0,0,0,0.45), 0 9px 22px rgba(20,90,170,0.5), inset 0 1px 0 rgba(210,230,255,0.2), inset 0 -3px 7px rgba(0,0,0,0.4);
+}
+/* 選択画面に戻る：グレー・シルバー（金枠なし） */
+.lobby-btn.btn-back {
+  color: #dcdce4;
+  background: linear-gradient(160deg, #6b6b78 0%, #454550 55%, #232329 100%);
+  box-shadow: 0 5px 0 rgba(0,0,0,0.4), 0 7px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -3px 6px rgba(0,0,0,0.35);
+}
+.lobby-btn.btn-back::after { background: linear-gradient(160deg, #d6d6de, #8f8f9a 45%, #55555e 70%, #d6d6de); }
+
 .lobby-btn:hover { transform: translateY(-4px); filter: brightness(1.12); }
+.lobby-btn.btn-room:hover { box-shadow: 0 10px 0 rgba(0,0,0,0.4), 0 0 32px rgba(212,175,55,0.6), 0 0 18px rgba(255,225,150,0.4); }
+.lobby-btn.btn-cpu:hover { box-shadow: 0 10px 0 rgba(0,0,0,0.4), 0 0 32px rgba(40,180,120,0.6), 0 0 18px rgba(140,255,200,0.4); }
 .lobby-btn.btn-create:hover { box-shadow: 0 10px 0 rgba(0,0,0,0.4), 0 0 32px rgba(220,60,90,0.7), 0 0 18px rgba(255,180,120,0.5); }
 .lobby-btn.btn-join:hover { box-shadow: 0 10px 0 rgba(0,0,0,0.4), 0 0 32px rgba(60,150,240,0.7), 0 0 18px rgba(160,210,255,0.5); }
+.lobby-btn.btn-back:hover { box-shadow: 0 8px 0 rgba(0,0,0,0.4), 0 0 20px rgba(190,190,200,0.4); filter: brightness(1.08); }
 .lobby-btn:active { transform: translateY(2px); }
 .lobby-btn:disabled { opacity: 0.4; filter: grayscale(40%); cursor: not-allowed; }
 .join-form { width: 100%; max-width: 320px; margin-top: 20px; text-align: left; background: linear-gradient(160deg, rgba(40,28,70,0.7), rgba(15,12,30,0.8)); padding: 18px; border-radius: 14px; border: 1px solid rgba(255,215,0,0.28); box-shadow: 0 8px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06); }
