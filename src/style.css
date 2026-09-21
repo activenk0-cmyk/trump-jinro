@@ -74,43 +74,49 @@ label { font-size: 12px; color: #c8bde8; display: block; margin-bottom: 4px; let
   position: relative; width: 100%; padding: 18px; font-size: 17px; font-weight: 800; letter-spacing: 0.08em;
   border-radius: 14px; cursor: pointer; color: #fff4dc; border: 2px solid transparent; background-clip: padding-box;
   text-shadow: 0 1px 3px rgba(0,0,0,0.85); transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+  font-family: "Cinzel", "Noto Serif JP", serif;
 }
-.lobby-btn::after { content: ""; position: absolute; inset: -2px; border-radius: 14px; z-index: -1; background: linear-gradient(160deg, #f0d98a, #b8860b 45%, #7a5a16 70%, #f0d98a); }
+.lobby-btn::after { content: ""; position: absolute; inset: -2px; border-radius: 14px; z-index: -1; background: linear-gradient(160deg, #d9bf72, #9c6f10 45%, #5e430f 70%, #d9bf72); }
 
-/* ルームマッチ：アンティークゴールド／ブロンズ */
 .lobby-btn.btn-room {
-  background: linear-gradient(160deg, #8a6a2c 0%, #5c4419 55%, #2e2109 100%);
-  box-shadow: 0 6px 0 rgba(0,0,0,0.45), 0 9px 22px rgba(140,100,30,0.45), inset 0 1px 0 rgba(255,235,180,0.25), inset 0 -3px 7px rgba(0,0,0,0.4);
+  background:
+    radial-gradient(130% 180% at 25% -20%, rgba(255,235,180,0.16), transparent 55%),
+    linear-gradient(160deg, #6b4f1a 0%, #4a350f 35%, #2e2109 65%, #1a1206 100%);
+  box-shadow: 0 6px 0 rgba(0,0,0,0.5), 0 8px 16px rgba(90,65,20,0.35), inset 0 1px 0 rgba(255,235,180,0.15), inset 0 -3px 7px rgba(0,0,0,0.5);
 }
-/* CPUマッチ：ディープエメラルド */
 .lobby-btn.btn-cpu {
-  background: linear-gradient(160deg, #1f8a5a 0%, #0f4a30 55%, #082a1c 100%);
-  box-shadow: 0 6px 0 rgba(0,0,0,0.45), 0 9px 22px rgba(20,120,80,0.4), inset 0 1px 0 rgba(200,255,225,0.2), inset 0 -3px 7px rgba(0,0,0,0.4);
+  background:
+    radial-gradient(130% 180% at 25% -20%, rgba(170,255,215,0.14), transparent 55%),
+    linear-gradient(160deg, #146640 0%, #0c3d28 35%, #082a1c 65%, #041712 100%);
+  box-shadow: 0 6px 0 rgba(0,0,0,0.5), 0 8px 16px rgba(15,90,60,0.3), inset 0 1px 0 rgba(200,255,225,0.12), inset 0 -3px 7px rgba(0,0,0,0.5);
 }
-/* 部屋を作る：ワインレッド */
 .lobby-btn.btn-create {
-  background: linear-gradient(160deg, #b8324f 0%, #7c1a32 55%, #430a1a 100%);
-  box-shadow: 0 6px 0 rgba(0,0,0,0.45), 0 9px 22px rgba(120,20,40,0.5), inset 0 1px 0 rgba(255,210,220,0.2), inset 0 -3px 7px rgba(0,0,0,0.4);
+  background:
+    radial-gradient(130% 180% at 25% -20%, rgba(255,190,205,0.14), transparent 55%),
+    linear-gradient(160deg, #8a2740 0%, #5c1526 35%, #430a1a 65%, #240509 100%);
+  box-shadow: 0 6px 0 rgba(0,0,0,0.5), 0 8px 16px rgba(90,15,30,0.35), inset 0 1px 0 rgba(255,210,220,0.12), inset 0 -3px 7px rgba(0,0,0,0.5);
 }
-/* 部屋に入る：サファイアブルー */
 .lobby-btn.btn-join {
-  background: linear-gradient(160deg, #2a78c9 0%, #164a7c 55%, #0a2340 100%);
-  box-shadow: 0 6px 0 rgba(0,0,0,0.45), 0 9px 22px rgba(20,90,170,0.5), inset 0 1px 0 rgba(210,230,255,0.2), inset 0 -3px 7px rgba(0,0,0,0.4);
+  background:
+    radial-gradient(130% 180% at 25% -20%, rgba(180,215,255,0.14), transparent 55%),
+    linear-gradient(160deg, #1f5a99 0%, #123a63 35%, #0a2340 65%, #051222 100%);
+  box-shadow: 0 6px 0 rgba(0,0,0,0.5), 0 8px 16px rgba(15,65,125,0.35), inset 0 1px 0 rgba(210,230,255,0.12), inset 0 -3px 7px rgba(0,0,0,0.5);
 }
-/* 選択画面に戻る：グレー・シルバー（金枠なし） */
 .lobby-btn.btn-back {
   color: #dcdce4;
-  background: linear-gradient(160deg, #6b6b78 0%, #454550 55%, #232329 100%);
-  box-shadow: 0 5px 0 rgba(0,0,0,0.4), 0 7px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -3px 6px rgba(0,0,0,0.35);
+  background:
+    radial-gradient(130% 180% at 25% -20%, rgba(220,220,235,0.12), transparent 55%),
+    linear-gradient(160deg, #55555f 0%, #38383f 35%, #232329 65%, #131316 100%);
+  box-shadow: 0 5px 0 rgba(0,0,0,0.45), 0 7px 14px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -3px 6px rgba(0,0,0,0.45);
 }
-.lobby-btn.btn-back::after { background: linear-gradient(160deg, #d6d6de, #8f8f9a 45%, #55555e 70%, #d6d6de); }
+.lobby-btn.btn-back::after { background: linear-gradient(160deg, #b8b8c2, #6f6f7a 45%, #3e3e46 70%, #b8b8c2); }
 
-.lobby-btn:hover { transform: translateY(-4px); filter: brightness(1.12); }
-.lobby-btn.btn-room:hover { box-shadow: 0 10px 0 rgba(0,0,0,0.4), 0 0 32px rgba(212,175,55,0.6), 0 0 18px rgba(255,225,150,0.4); }
-.lobby-btn.btn-cpu:hover { box-shadow: 0 10px 0 rgba(0,0,0,0.4), 0 0 32px rgba(40,180,120,0.6), 0 0 18px rgba(140,255,200,0.4); }
-.lobby-btn.btn-create:hover { box-shadow: 0 10px 0 rgba(0,0,0,0.4), 0 0 32px rgba(220,60,90,0.7), 0 0 18px rgba(255,180,120,0.5); }
-.lobby-btn.btn-join:hover { box-shadow: 0 10px 0 rgba(0,0,0,0.4), 0 0 32px rgba(60,150,240,0.7), 0 0 18px rgba(160,210,255,0.5); }
-.lobby-btn.btn-back:hover { box-shadow: 0 8px 0 rgba(0,0,0,0.4), 0 0 20px rgba(190,190,200,0.4); filter: brightness(1.08); }
+.lobby-btn:hover { transform: translateY(-4px); filter: brightness(1.06); }
+.lobby-btn.btn-room:hover { box-shadow: 0 10px 0 rgba(0,0,0,0.45), 0 0 22px rgba(180,140,40,0.45), 0 0 12px rgba(220,180,110,0.3); }
+.lobby-btn.btn-cpu:hover { box-shadow: 0 10px 0 rgba(0,0,0,0.45), 0 0 22px rgba(30,140,95,0.45), 0 0 12px rgba(110,220,170,0.3); }
+.lobby-btn.btn-create:hover { box-shadow: 0 10px 0 rgba(0,0,0,0.45), 0 0 22px rgba(160,45,70,0.5), 0 0 12px rgba(220,140,110,0.35); }
+.lobby-btn.btn-join:hover { box-shadow: 0 10px 0 rgba(0,0,0,0.45), 0 0 22px rgba(45,110,180,0.5), 0 0 12px rgba(130,180,230,0.35); }
+.lobby-btn.btn-back:hover { box-shadow: 0 8px 0 rgba(0,0,0,0.45), 0 0 16px rgba(180,180,195,0.35); filter: brightness(1.04); }
 .lobby-btn:active { transform: translateY(2px); }
 .lobby-btn:disabled { opacity: 0.4; filter: grayscale(40%); cursor: not-allowed; }
 .join-form { width: 100%; max-width: 320px; margin-top: 20px; text-align: left; background: linear-gradient(160deg, rgba(40,28,70,0.7), rgba(15,12,30,0.8)); padding: 18px; border-radius: 14px; border: 1px solid rgba(255,215,0,0.28); box-shadow: 0 8px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06); }
