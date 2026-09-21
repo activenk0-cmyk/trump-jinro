@@ -428,8 +428,18 @@ function playSummonEffect(btn) {
   const trigger = () => {
     if (done) return;
     done = true;
-    document.getElementById("app").classList.add("shake");
-    setTimeout(() => { const a = document.getElementById("app"); if (a) a.classList.remove("shake"); }, 160);
+    const appEl = document.getElementById("app");
+    if (appEl) {
+      appEl.animate([
+        { transform: "translate(0, 0)" },
+        { transform: "translate(-8px, 5px)" },
+        { transform: "translate(8px, -5px)" },
+        { transform: "translate(-6px, -6px)" },
+        { transform: "translate(6px, 6px)" },
+        { transform: "translate(-3px, 2px)" },
+        { transform: "translate(0, 0)" }
+      ], { duration: 320, easing: "ease-out" });
+    }
     spawnSparks(rect);
   };
   btn.addEventListener("animationend", trigger, { once: true });
@@ -438,11 +448,18 @@ function playSummonEffect(btn) {
 function spawnSparks(rect) {
   const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
   const layer = document.createElement("div"); layer.className = "spark-layer"; document.body.appendChild(layer);
+  const flash = document.createElement("div");
+  flash.style.cssText = `position:absolute; left:${cx}px; top:${cy}px; width:40px; height:40px; margin:-20px 0 0 -20px; border-radius:50%; background:radial-gradient(circle, #fff 0%, rgba(255,230,150,0.9) 35%, rgba(255,200,80,0) 70%);`;
+  layer.appendChild(flash);
+  flash.animate([{ transform: "scale(0.5)", opacity: 1 }, { transform: "scale(4)", opacity: 0 }], { duration: 400, easing: "ease-out", fill: "forwards" });
   for (let i = 0; i < 60; i++) {
     const sp = document.createElement("div"); sp.className = "spark";
     sp.style.left = cx + "px"; sp.style.top = cy + "px";
-    const ang = Math.random() * Math.PI * 2, dist = 60 + Math.random() * 120;
-    const dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist, sc = 0.5 + Math.random() * 1.2;
+    sp.style.width = "10px"; sp.style.height = "10px";
+    sp.style.mixBlendMode = "normal";
+    sp.style.boxShadow = "0 0 8px rgba(255,220,120,0.9)";
+    const ang = Math.random() * Math.PI * 2, dist = 70 + Math.random() * 140;
+    const dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist, sc = 0.6 + Math.random() * 1.2;
     layer.appendChild(sp);
     sp.animate([{ transform: `translate(0,0) scale(${sc})`, opacity: 1 }, { transform: `translate(${dx}px, ${dy}px) scale(0)`, opacity: 0 }], { duration: 700 + Math.random() * 300, easing: "cubic-bezier(0.15,0.7,0.3,1)", fill: "forwards" });
   }
